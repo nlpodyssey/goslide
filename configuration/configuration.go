@@ -33,7 +33,17 @@ type Configuration struct {
 	SavedWeights   string
 	LogFile        string
 	UseAdam        bool
+	HashFunction   HashFunctionType
 }
+
+type HashFunctionType int8
+
+const (
+	WtaHashFunction HashFunctionType = iota + 1
+	DensifiedWtaHashFunction
+	DensifiedMinhashFunction
+	SparseRandomProjectionHashFunction
+)
 
 func Default() *Configuration {
 	return &Configuration{
@@ -58,6 +68,7 @@ func Default() *Configuration {
 		SavedWeights:   "",
 		LogFile:        "",
 		UseAdam:        true,
+		HashFunction:   DensifiedWtaHashFunction,
 	}
 }
 
