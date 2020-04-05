@@ -34,7 +34,8 @@ func TestBucketAdd(t *testing.T) {
 
 	t.Run("insert some initial elements", func(t *testing.T) {
 		for i := 0; i < 10; i++ {
-			b.Add(i + 1000)
+			r := b.Add(i + 1000)
+			assertIntEqual(t, r, i, "Add")
 		}
 
 		assertIntEqual(t, b.GetSize(), 10, "GetSize")
@@ -63,7 +64,8 @@ func TestBucketAdd(t *testing.T) {
 
 	t.Run("insert more elements to reach full capacity", func(t *testing.T) {
 		for i := 10; i < 128; i++ {
-			b.Add(i + 1000)
+			r := b.Add(i + 1000)
+			assertIntEqual(t, r, i, "Add")
 		}
 
 		assertIntEqual(t, b.GetSize(), 128, "GetSize")
@@ -84,7 +86,8 @@ func TestBucketAdd(t *testing.T) {
 
 	t.Run("insert more elements beyond capacity", func(t *testing.T) {
 		for i := 128; i < 130; i++ {
-			b.Add(i + 1000)
+			r := b.Add(i + 1000)
+			assertIntEqual(t, r, i-128, "Add")
 		}
 
 		// FIXME: shouldn't size be still 128?
