@@ -105,6 +105,10 @@ func (n *Node) Weights() []float64 {
 	return n.base.weights
 }
 
+func (n *Node) Bias() float64 {
+	return n.base.bias
+}
+
 func (nd *Node) Update(
 	cowId int,
 	dim int,
