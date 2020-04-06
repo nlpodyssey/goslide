@@ -405,6 +405,7 @@ func (n *baseNode) cloneIfNeeded(cowId int) *baseNode {
 }
 
 func (n *baseNode) clone(cowId int) *baseNode {
+	// TODO: not sure we should clone all slices...
 	return &baseNode{
 		cowId:            cowId,
 		activeInputs:     n.activeInputs,
