@@ -109,6 +109,20 @@ func (n *Node) Bias() float64 {
 	return n.base.bias
 }
 
+func (nd *Node) SetIndices(
+	cowId int,
+	indicesInTables []int,
+	indicesInBuckets []int,
+) *Node {
+	n := nd.cloneIfNeeded(cowId)
+	n.base = n.base.cloneIfNeeded(cowId)
+
+	n.base.indicesInTables = indicesInTables
+	n.base.indicesInBuckets = indicesInBuckets
+
+	return n
+}
+
 func (nd *Node) Update(
 	cowId int,
 	dim int,
