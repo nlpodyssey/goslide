@@ -11,7 +11,7 @@ import (
 type Node struct {
 	cowId int // "thread" ID for copy on write
 	base  *baseNode
-	train []*nodeTrain
+	train []*NodeTrain
 }
 
 type baseNode struct {
@@ -37,12 +37,18 @@ type baseNode struct {
 	mirrorbias       float64
 }
 
-type nodeTrain struct {
+type NodeTrain struct {
 	cowId           int // "thread" ID for copy on write
 	lastDeltaforBPs float64
 	lastActivations float64
 	lastGradients   float64
 	activeinputIds  float64
+}
+
+func NewNodeTrain(cowId int) *NodeTrain {
+	return &NodeTrain{
+		cowId: cowId,
+	}
 }
 
 func NewEmptyNode(cowId int) *Node {
@@ -79,7 +85,7 @@ func NewNode(
 			bias:             bias,
 			mirrorbias:       bias,
 		},
-		train: make([]*nodeTrain, batchsize),
+		train: make([]*NodeTrain, batchsize),
 	}
 
 	if configuration.Global.UseAdam {
@@ -89,7 +95,7 @@ func NewNode(
 	}
 
 	for i := range newNode.train {
-		newNode.train[i] = &nodeTrain{cowId: cowId}
+		newNode.train[i] = NewNodeTrain(cowId)
 	}
 
 	return newNode
@@ -106,7 +112,7 @@ func (nd *Node) Update(
 	bias float64,
 	adamAvgMom []float64,
 	adamAvgVel []float64,
-	trainBlob []*nodeTrain,
+	trainBlob []*NodeTrain,
 ) *Node {
 	n := nd.cloneIfNeeded(cowId)
 	n.base = n.base.cloneIfNeeded(cowId)
@@ -128,7 +134,7 @@ func (nd *Node) Update(
 	}
 
 	trainSlice := trainBlob[nodeId*batchsize : len(trainBlob)-1]
-	n.train = make([]*nodeTrain, len(trainSlice))
+	n.train = make([]*NodeTrain, len(trainSlice))
 	copy(n.train, trainSlice)
 
 	return n
@@ -384,7 +390,7 @@ func (n *Node) clone(cowId int) *Node {
 	}
 
 	if n.train != nil {
-		newNode.train = make([]*nodeTrain, len(n.train))
+		newNode.train = make([]*NodeTrain, len(n.train))
 		copy(newNode.train, n.train)
 	}
 
@@ -423,15 +429,15 @@ func (n *baseNode) clone(cowId int) *baseNode {
 	}
 }
 
-func (n *nodeTrain) cloneIfNeeded(cowId int) *nodeTrain {
+func (n *NodeTrain) cloneIfNeeded(cowId int) *NodeTrain {
 	if n.cowId != cowId {
 		return n.clone(cowId)
 	}
 	return n
 }
 
-func (t *nodeTrain) clone(cowId int) *nodeTrain {
-	return &nodeTrain{
+func (t *NodeTrain) clone(cowId int) *NodeTrain {
+	return &NodeTrain{
 		cowId:           cowId,
 		lastDeltaforBPs: t.lastDeltaforBPs,
 		lastActivations: t.lastActivations,
