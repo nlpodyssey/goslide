@@ -34,6 +34,7 @@ type Configuration struct {
 	LogFile        string
 	UseAdam        bool
 	HashFunction   HashFunctionType
+	LoadWeight     bool
 }
 
 type HashFunctionType int8
@@ -69,6 +70,7 @@ func Default() *Configuration {
 		LogFile:        "",
 		UseAdam:        true,
 		HashFunction:   DensifiedWtaHashFunction,
+		LoadWeight:     false,
 	}
 }
 
