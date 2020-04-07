@@ -208,6 +208,35 @@ func New(
 	return newLayer
 }
 
+// TODO: duplicated code from New
+func (la *Layer) UpdateTable(cowId int) *Layer {
+	l := la.cloneIfNeeded(cowId)
+
+	switch configuration.Global.HashFunction {
+	case configuration.WtaHashFunction:
+		l.wtaHasher = wta_hash.New(l.k*l.l, l.previousLayerNumOfNodes)
+
+	case configuration.DensifiedWtaHashFunction:
+		l.binIds = make([]int, l.previousLayerNumOfNodes)
+		l.dwtaHasher =
+			densified_wta_hash.New(l.k*l.l, l.previousLayerNumOfNodes)
+
+	case configuration.DensifiedMinhashFunction:
+		l.minHasher = densified_minhash.New(l.k*l.l, l.previousLayerNumOfNodes)
+		l.binIds = l.minHasher.GetMap(l.previousLayerNumOfNodes)
+
+	case configuration.SparseRandomProjectionHashFunction:
+		l.srp = sparse_random_projection.New(
+			l.previousLayerNumOfNodes, l.k*l.l, srpRatio)
+
+	default:
+		panic(fmt.Sprintf("Unexpected hash function %d.",
+			configuration.Global.HashFunction))
+	}
+
+	return l
+}
+
 func (l *Layer) addToHashTable(
 	cowId int,
 	weights []float64,
