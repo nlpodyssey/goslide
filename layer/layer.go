@@ -237,6 +237,13 @@ func (la *Layer) UpdateTable(cowId int) *Layer {
 	return l
 }
 
+func (l *Layer) UpdateRandomNodes() {
+	swapRandNode := func(i, j int) {
+		l.randNode[i], l.randNode[j] = l.randNode[j], l.randNode[i]
+	}
+	rand.Shuffle(l.numOfNodes, swapRandNode)
+}
+
 func (l *Layer) addToHashTable(
 	cowId int,
 	weights []float64,
