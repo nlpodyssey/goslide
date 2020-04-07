@@ -263,6 +263,14 @@ func (l *Layer) GetNomalizationConstant(inputId int) float64 {
 	return l.normalizationConstants[inputId]
 }
 
+func (l *Layer) Innerproduct(index1 []int, value1, value2 []float64) float64 {
+	total := 0.0
+	for i, v1 := range value1 {
+		total += v1 * value2[index1[i]]
+	}
+	return total
+}
+
 func (l *Layer) addToHashTable(
 	cowId int,
 	weights []float64,
