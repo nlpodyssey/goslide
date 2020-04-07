@@ -252,6 +252,10 @@ func (l *Layer) GetAllNodes() []*node.Node {
 	return l.nodes
 }
 
+func (l *Layer) GetNodeCount() int {
+	return l.numOfNodes
+}
+
 func (l *Layer) addToHashTable(
 	cowId int,
 	weights []float64,
