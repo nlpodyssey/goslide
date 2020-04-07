@@ -256,6 +256,13 @@ func (l *Layer) GetNodeCount() int {
 	return l.numOfNodes
 }
 
+func (l *Layer) GetNomalizationConstant(inputId int) float64 {
+	if l.nodeType != node.Softmax {
+		panic("Call to GetNomalizationConstant for non-softmax layer")
+	}
+	return l.normalizationConstants[inputId]
+}
+
 func (l *Layer) addToHashTable(
 	cowId int,
 	weights []float64,
