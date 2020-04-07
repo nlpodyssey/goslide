@@ -35,6 +35,7 @@ type Configuration struct {
 	UseAdam        bool
 	HashFunction   HashFunctionType
 	LoadWeight     bool
+	LayerMode      LayerModeType
 }
 
 type HashFunctionType int8
@@ -44,6 +45,15 @@ const (
 	DensifiedWtaHashFunction
 	DensifiedMinhashFunction
 	SparseRandomProjectionHashFunction
+)
+
+type LayerModeType int8
+
+const ( // TODO: find meaningful names
+	LayerMode1 LayerModeType = iota + 1 // mode 1 == top-K treshold ?
+	LayerMode2
+	LayerMode3
+	LayerMode4 // mode 4 == sampling ?
 )
 
 func Default() *Configuration {
@@ -71,6 +81,7 @@ func Default() *Configuration {
 		UseAdam:        true,
 		HashFunction:   DensifiedWtaHashFunction,
 		LoadWeight:     false,
+		LayerMode:      LayerMode4,
 	}
 }
 
