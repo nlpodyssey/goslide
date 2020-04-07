@@ -244,6 +244,10 @@ func (l *Layer) UpdateRandomNodes() {
 	rand.Shuffle(l.numOfNodes, swapRandNode)
 }
 
+func (l *Layer) GetNodeById(nodeId int) *node.Node {
+	return l.nodes[nodeId]
+}
+
 func (l *Layer) addToHashTable(
 	cowId int,
 	weights []float64,
