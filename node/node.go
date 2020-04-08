@@ -198,7 +198,8 @@ func (nd *Node) GetActivation(
 	cowId int,
 	indices []int,
 	values []float64,
-	length, inputId int,
+	length int,
+	inputId int,
 ) (float64, *Node) {
 	if inputId > nd.base.currentBatchsize {
 		panic("Input ID more than Batch Size")
