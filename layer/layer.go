@@ -191,10 +191,6 @@ func New(
 
 	// create nodes for this layer
 
-	lastWeightsIndex := len(weights) - 1
-	lastAdamAvgMomIndex := len(adamAvgMom) - 1
-	lastAdamAvgVel := len(adamAvgVel) - 1
-
 	// TODO: parallel!
 	for i := range newLayer.nodes {
 		newLayer.nodes[i] = newLayer.nodes[i].Update(
@@ -204,11 +200,11 @@ func New(
 			layerId,
 			nodeType,
 			batchSize,
-			weights[previousLayerNumOfNodes*i:lastWeightsIndex],
-			bias[i],
-			adamAvgMom[previousLayerNumOfNodes*i:lastAdamAvgMomIndex],
-			adamAvgVel[previousLayerNumOfNodes*i:lastAdamAvgVel],
-			newLayer.trainArray,
+			newLayer.weights[previousLayerNumOfNodes*i:previousLayerNumOfNodes*i+previousLayerNumOfNodes],
+			newLayer.bias[i],
+			newLayer.adamAvgMom[previousLayerNumOfNodes*i:previousLayerNumOfNodes*i+previousLayerNumOfNodes],
+			newLayer.adamAvgVel[previousLayerNumOfNodes*i:previousLayerNumOfNodes*i+previousLayerNumOfNodes],
+			newLayer.trainArray[batchSize*i:batchSize*i+batchSize],
 		)
 		newLayer.addToHashTable(
 			cowId,
