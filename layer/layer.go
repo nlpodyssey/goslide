@@ -387,7 +387,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 				tmpSize := 0
 				if l.nodeType == node.Softmax && len(label) > 0 {
 					for i, labelValue := range label {
-						activeNodesPerLayer[layerIndex+1][i] = label[i]
+						activeNodesPerLayer[layerIndex+1][i] = labelValue
 						bs[labelValue] = true
 					}
 					tmpSize = len(label)
@@ -574,6 +574,43 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 	}
 
 	return in, l
+}
+
+func (l *Layer) ClearHashTables() {
+	l.hashTables.Clear()
+}
+
+func (l *Layer) NumOfNodes() int {
+	return l.numOfNodes
+}
+
+func (l *Layer) GetHashForInputProcessing(weights []float64) []int {
+	// TODO: duplicated code
+	switch configuration.Global.HashFunction {
+	case configuration.WtaHashFunction:
+		return l.wtaHasher.GetHash(weights)
+
+	case configuration.DensifiedWtaHashFunction:
+		return l.dwtaHasher.GetHashEasy(weights, topK)
+
+	case configuration.DensifiedMinhashFunction:
+		return l.minHasher.GetHashEasy(l.binIds, weights, topK)
+
+	case configuration.SparseRandomProjectionHashFunction:
+		return l.srp.GetHash(weights)
+
+	default:
+		panic(fmt.Sprintf("Unexpected hash function %d.",
+			configuration.Global.HashFunction))
+	}
+}
+
+func (l *Layer) HashesToIndex(hashes []int) []int {
+	return l.hashTables.HashesToIndex(hashes)
+}
+
+func (l *Layer) HashTablesAdd(indices []int, id int) []int {
+	return l.hashTables.Add(indices, id)
 }
 
 func (l *Layer) addToHashTable(
