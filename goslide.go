@@ -276,7 +276,7 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 		totCorrect += correctPredict
 
 		fmt.Printf("Iter %d: %f correct\n",
-			iter, float64(totCorrect)/(float64(config.BatchSize)*(float64(i)+1)))
+			i, float64(totCorrect)/(float64(config.BatchSize)*(float64(i)+1)))
 	}
 
 	fmt.Printf("Over all: %f correct\n",
