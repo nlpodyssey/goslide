@@ -16,7 +16,7 @@ type Configuration struct {
 	K              []int
 	L              []int
 	Sparsity       []float64
-	Batchsize      int
+	BatchSize      int
 	Rehash         int
 	Rebuild        int
 	InputDim       int
@@ -62,7 +62,7 @@ func Default() *Configuration {
 		K:              make([]int, 0),
 		L:              make([]int, 0),
 		Sparsity:       make([]float64, 0),
-		Batchsize:      1000,
+		BatchSize:      1000,
 		Rehash:         1000,
 		Rebuild:        1000,
 		InputDim:       784,
