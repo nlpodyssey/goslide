@@ -31,10 +31,10 @@ type baseNode struct {
 	t                []float64 // for adam
 	update           []int
 	bias             float64
-	tbias            float64
-	adamAvgMombias   float64
-	adamAvgVelbias   float64
-	mirrorbias       float64
+	tBias            float64
+	adamAvgMomBias   float64
+	adamAvgVelBias   float64
+	mirrorBias       float64
 }
 
 type NodeTrain struct {
@@ -83,7 +83,7 @@ func NewNode(
 			activeInputs:     0,
 			weights:          weights,
 			bias:             bias,
-			mirrorbias:       bias,
+			mirrorBias:       bias,
 		},
 		train: make([]*NodeTrain, batchsize),
 	}
@@ -105,8 +105,102 @@ func (n *Node) Weights() []float64 {
 	return n.base.weights
 }
 
+// Copies the given weights into the node (without cloning)
+func (n *Node) SetWeights(weights []float64) {
+	copy(n.base.weights, weights)
+}
+
 func (n *Node) Bias() float64 {
 	return n.base.bias
+}
+
+func (n *Node) Dim() int {
+	return n.base.dim
+}
+
+func (n *Node) GetT(i int) float64 {
+	return n.base.t[i]
+}
+
+func (nd *Node) SetT(cowId, i int, value float64) *Node {
+	n := nd.cloneIfNeeded(cowId)
+	n.base = n.base.cloneIfNeeded(cowId)
+	n.base.t[i] = value
+	return n
+}
+
+func (n *Node) GetAdamAvgMom(i int) float64 {
+	return n.base.adamAvgMom[i]
+}
+
+func (nd *Node) SetAdamAvgMom(cowId, i int, value float64) *Node {
+	n := nd.cloneIfNeeded(cowId)
+	n.base = n.base.cloneIfNeeded(cowId)
+	n.base.adamAvgMom[i] = value
+	return n
+}
+
+func (n *Node) GetAdamAvgVel(i int) float64 {
+	return n.base.adamAvgVel[i]
+}
+
+func (nd *Node) SetAdamAvgVel(cowId, i int, value float64) *Node {
+	n := nd.cloneIfNeeded(cowId)
+	n.base = n.base.cloneIfNeeded(cowId)
+	n.base.adamAvgVel[i] = value
+	return n
+}
+
+func (n *Node) GetAdamAvgMomBias() float64 {
+	return n.base.adamAvgMomBias
+}
+
+func (nd *Node) SetAdamAvgMomBias(cowId int, value float64) *Node {
+	n := nd.cloneIfNeeded(cowId)
+	n.base = n.base.cloneIfNeeded(cowId)
+	n.base.adamAvgMomBias = value
+	return n
+}
+
+func (n *Node) GetAdamAvgVelBias() float64 {
+	return n.base.adamAvgVelBias
+}
+
+func (nd *Node) SetAdamAvgVelBias(cowId int, value float64) *Node {
+	n := nd.cloneIfNeeded(cowId)
+	n.base = n.base.cloneIfNeeded(cowId)
+	n.base.adamAvgVelBias = value
+	return n
+}
+
+func (n *Node) GetBias() float64 {
+	return n.base.bias
+}
+
+func (nd *Node) SetBias(cowId int, value float64) *Node {
+	n := nd.cloneIfNeeded(cowId)
+	n.base = n.base.cloneIfNeeded(cowId)
+	n.base.bias = value
+	return n
+}
+
+func (n *Node) GetTBias() float64 {
+	return n.base.tBias
+}
+
+func (nd *Node) SetTBias(cowId int, value float64) *Node {
+	n := nd.cloneIfNeeded(cowId)
+	n.base = n.base.cloneIfNeeded(cowId)
+	n.base.tBias = value
+	return n
+}
+
+func (nd *Node) CopyWeightsAndBiasFromMirror(cowId int) *Node {
+	n := nd.cloneIfNeeded(cowId)
+	n.base = n.base.cloneIfNeeded(cowId)
+	copy(n.base.weights, n.base.mirrorWeights)
+	n.base.bias = n.base.mirrorBias
+	return n
 }
 
 func (nd *Node) SetIndices(
@@ -147,7 +241,7 @@ func (nd *Node) Update(
 	n.base.activeInputs = 0
 	n.base.weights = weights
 	n.base.bias = bias
-	n.base.mirrorbias = bias
+	n.base.mirrorBias = bias
 
 	if configuration.Global.UseAdam {
 		n.base.adamAvgMom = adamAvgMom
@@ -308,9 +402,9 @@ func (nd *Node) BackPropagate(
 	if configuration.Global.UseAdam {
 		biasgradT := n.train[inputId].lastDeltaforBPs
 		// TODO: ?? biasgradTsq := biasgradT * biasgradT
-		n.base.tbias += biasgradT
+		n.base.tBias += biasgradT
 	} else {
-		n.base.mirrorbias += learningRate * n.train[inputId].lastDeltaforBPs
+		n.base.mirrorBias += learningRate * n.train[inputId].lastDeltaforBPs
 	}
 
 	n.train[inputId].activeinputIds = 0
@@ -350,9 +444,9 @@ func (nd *Node) BackPropagateFirstLayer(
 	if configuration.Global.UseAdam {
 		biasgradT := n.train[inputId].lastDeltaforBPs
 		// TODO: ?? biasgradTsq = biasgradT * biasgradT
-		n.base.tbias += biasgradT
+		n.base.tBias += biasgradT
 	} else {
-		n.base.mirrorbias += learningRate + n.train[inputId].lastDeltaforBPs
+		n.base.mirrorBias += learningRate + n.train[inputId].lastDeltaforBPs
 	}
 
 	n.train[inputId].activeinputIds = 0 // deactivate inputIDs
@@ -446,10 +540,10 @@ func (n *baseNode) clone(cowId int) *baseNode {
 		t:                copyFloat64Slice(n.t),
 		update:           copyIntSlice(n.update),
 		bias:             n.bias,
-		tbias:            n.tbias,
-		adamAvgMombias:   n.adamAvgMombias,
-		adamAvgVelbias:   n.adamAvgVelbias,
-		mirrorbias:       n.mirrorbias,
+		tBias:            n.tBias,
+		adamAvgMomBias:   n.adamAvgMomBias,
+		adamAvgVelBias:   n.adamAvgVelBias,
+		mirrorBias:       n.mirrorBias,
 	}
 }
 
