@@ -249,9 +249,7 @@ func (nd *Node) Update(
 		n.base.t = make([]float64, dim)
 	}
 
-	trainSlice := trainBlob[nodeId*batchsize : len(trainBlob)-1]
-	n.train = make([]*NodeTrain, len(trainSlice))
-	copy(n.train, trainSlice)
+	n.train = trainBlob
 
 	return n
 }
