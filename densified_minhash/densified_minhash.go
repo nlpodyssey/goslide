@@ -134,8 +134,8 @@ func (dm *DensifiedMinhash) GetHashEasy(
 }
 
 func (dm *DensifiedMinhash) GetRandDoubleHash(binId, count int) int {
-	toHash := ((binId + 1) << 6) + count
-	return (dm.randHash[0] * toHash << 3) >> (32 - dm.logNumHash) // logNumHash needs to be ceiled.
+	toHash := ((uint(binId) + 1) << 6) + uint(count)
+	return int((uint(dm.randHash[0]) * toHash << 3) >> (32 - dm.logNumHash)) // logNumHash needs to be ceiled.
 }
 
 func (dm *DensifiedMinhash) GetMap(n int) []int {
