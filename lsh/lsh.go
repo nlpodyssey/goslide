@@ -81,22 +81,21 @@ func (lsh *LSH) HashesToIndex(hashes []int) []int {
 	indices := make([]int, lsh.l)
 
 	for i := range indices {
-		index := 0
+		var index uint = 0
 
 		for j := 0; j < lsh.k; j++ {
 			switch hashFunction {
 			case configuration.WtaHashFunction, configuration.DensifiedWtaHashFunction:
-				h := hashes[lsh.k*i+j]
+				h := uint(hashes[lsh.k*i+j])
 				index += h << ((lsh.k - 1 - j) * logBinSize)
 			case configuration.DensifiedMinhashFunction:
 				randVal := lsh.rand1[lsh.k*i+j]
-				h := randVal
-				h *= randVal
+				h := uint(randVal * randVal)
 				h ^= h >> 13
-				h ^= lsh.rand1[lsh.k*i+j]
-				index += h * hashes[lsh.k*i+j]
+				h ^= uint(lsh.rand1[lsh.k*i+j])
+				index += h * uint(hashes[lsh.k*i+j])
 			case configuration.SparseRandomProjectionHashFunction:
-				h := hashes[lsh.k*i+j]
+				h := uint(hashes[lsh.k*i+j])
 				index += h << (lsh.k - 1 - j)
 			}
 		}
@@ -105,7 +104,7 @@ func (lsh *LSH) HashesToIndex(hashes []int) []int {
 			index = index & ((1 << lsh.rangePow) - 1)
 		}
 
-		indices[i] = index
+		indices[i] = int(index)
 	}
 
 	return indices
