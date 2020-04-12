@@ -62,7 +62,7 @@ func (dm *DensifiedMinhash) GetHash(
 		}
 
 		for count := 1; next == math.MinInt64; count++ {
-			index := minInt(dm.GetRandDoubleHash(i, count), dm.numHashes)
+			index := minInt(dm.GetRandDoubleHash(i, count), dm.numHashes-1)
 			next = hashes[index] // Kills GPU.
 
 			if count > 100 { // Densification failure.
@@ -119,7 +119,7 @@ func (dm *DensifiedMinhash) GetHashEasy(
 		}
 
 		for count := 1; next == math.MinInt64; count++ {
-			index := minInt(dm.GetRandDoubleHash(i, count), dm.numHashes)
+			index := minInt(dm.GetRandDoubleHash(i, count), dm.numHashes-1)
 			next = hashes[index] // Kills GPU.
 
 			if count > 100 { // Densification failure.
