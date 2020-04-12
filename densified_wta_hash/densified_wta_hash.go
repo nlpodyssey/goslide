@@ -11,7 +11,6 @@
 package densified_wta_hash
 
 import (
-	// "hash/maphash"
 	"math"
 	"math/rand"
 	"time"
