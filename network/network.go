@@ -227,7 +227,11 @@ func (ne *Network) ProcessInput(
 
 	if iter%6946 == 6945 { // TODO: avoid magic number
 		// TODO: ?? _learningRate *= 0.5;
-		n.hiddenLayers[1].UpdateRandomNodes()
+
+		for i := 1; i < n.numberOfLayers; i++ {
+			// FIXME: or should this be done only on the very last layer?
+			n.hiddenLayers[i].UpdateRandomNodes()
+		}
 	}
 
 	tmpLr := n.learningRate
