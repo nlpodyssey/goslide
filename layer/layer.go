@@ -300,7 +300,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 	in := 0
 
 	if sparsity == 1.0 {
-		length := l.numOfNodes
+		length = l.numOfNodes
 		lengths[layerIndex+1] = length
 		activeNodesPerLayer[layerIndex+1] = make([]int, length) // assuming not intitialized
 		for i := range activeNodesPerLayer[layerIndex+1] {
