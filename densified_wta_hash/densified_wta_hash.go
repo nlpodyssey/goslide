@@ -101,6 +101,7 @@ func (dw *DensifiedWtaHash) GetHash(indices []int, data []float64) []int {
 			next = hashes[index] // Kills GPU.
 
 			if count > 100 { // Densification failure.
+				next = 0 // FIXME: can we do better than that?
 				break
 			}
 		}
