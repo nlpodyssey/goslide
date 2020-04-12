@@ -380,9 +380,10 @@ func (ne *Network) ProcessInput(
 	}
 
 	if debug && rehash {
-		fmt.Printf("Avg sample size = %f %f\n",
-			float64(avgRetrieval[0])/float64(n.currentBatchSize),
-			float64(avgRetrieval[1])/float64(n.currentBatchSize))
+		for i, v := range avgRetrieval {
+			fmt.Printf("Avg sample size [%d] = %f\n",
+				i, float64(v)/float64(n.currentBatchSize))
+		}
 	}
 
 	return logLoss, n
