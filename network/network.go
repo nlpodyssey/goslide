@@ -277,7 +277,6 @@ func (ne *Network) ProcessInput(
 		// layers
 		for j := n.numberOfLayers - 1; j >= 0; j-- {
 			layer := n.hiddenLayers[j]
-			prevLayer := n.hiddenLayers[j-1]
 			// nodes
 			for k := 0; k < sizesPerBatch[i][j+1]; k++ {
 				node := layer.GetNodeById(activeNodesPerBatch[i][j+1][k])
@@ -292,6 +291,7 @@ func (ne *Network) ProcessInput(
 					)
 				}
 				if j != 0 {
+					prevLayer := n.hiddenLayers[j-1]
 					// FIXME: we should reassign the cow-ed node into the layer
 					allNodes := prevLayer.GetAllNodes()
 					node.BackPropagate(
