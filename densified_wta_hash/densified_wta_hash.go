@@ -156,8 +156,8 @@ func (dw *DensifiedWtaHash) GetHashEasy(data []float64, topK int) []int {
 }
 
 func (dw *DensifiedWtaHash) GetRandDoubleHash(binId, count int) int {
-	toHash := ((binId + 1) << 6) + count
-	return (dw.randHash[0] * toHash << 3) >> (32 - dw.logNumHash) // logNumHash needs to be ceiled.
+	toHash := ((uint(binId) + 1) << 6) + uint(count)
+	return int((uint(dw.randHash[0]) * toHash << 3) >> (32 - dw.logNumHash)) // logNumHash needs to be ceiled.
 }
 
 func positiveOddRandomInt() int {
