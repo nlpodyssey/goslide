@@ -141,7 +141,7 @@ func (dw *DensifiedWtaHash) GetHashEasy(data []float64, topK int) []int {
 		}
 
 		for count := 1; next == math.MinInt64; count++ {
-			index := minInt(dw.GetRandDoubleHash(i, count), dw.numHashes)
+			index := minInt(dw.GetRandDoubleHash(i, count), dw.numHashes-1)
 			next = hashes[index] // Kills GPU.
 
 			if count > 100 { // Densification failure.
