@@ -153,10 +153,6 @@ func (dm *DensifiedMinhash) GetMap(n int) []int {
 	mh.SetSeed(dm.seed)
 
 	for i := 0; i < n; i++ {
-		h := i * dm.randa
-		h ^= h >> 13
-		h *= 0x85ebca6b
-
 		bufLen := binary.PutVarint(buf, int64(i))
 		mh.Reset()
 		mh.Write(buf[:bufLen])
