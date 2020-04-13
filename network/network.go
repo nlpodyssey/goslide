@@ -149,9 +149,7 @@ func (ne *Network) PredictClass(
 	cowId int,
 	inputIndices [][]int,
 	inputValues [][]float64,
-	length []int,
 	labels [][]int,
-	labelSize []int,
 ) (int, *Network) {
 	n := ne.cloneIfNeeded(cowId)
 
@@ -166,7 +164,7 @@ func (ne *Network) PredictClass(
 
 		activeNodesPerLayer[0] = inputIndices[i]
 		activeValuesPerLayer[0] = inputValues[i]
-		sizes[0] = length[i]
+		sizes[0] = len(inputIndices[i])
 
 		//inference
 		for j := 0; j < n.numberOfLayers; j++ {

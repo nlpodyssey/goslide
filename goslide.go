@@ -169,21 +169,17 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 	for i := 0; i < numBatchesTest; i++ {
 		records := make([][]int, config.BatchSize)
 		values := make([][]float64, config.BatchSize)
-		sizes := make([]int, config.BatchSize)
 		labels := make([][]int, config.BatchSize)
-		labelSize := make([]int, config.BatchSize)
 		numFeatures := 0
 		numLabels := 0
 
 		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
-			sizes[count] = scanner.FeaturesLength()
 			records[count] = scanner.FeatureIndices()
 			values[count] = scanner.FeatureValues()
 			labels[count] = scanner.Labels()
-			labelSize[count] = scanner.LabelsLength()
 
-			numFeatures += scanner.FeaturesLength()
-			numLabels += scanner.LabelsLength()
+			numFeatures += len(records[count])
+			numLabels += len(labels[count])
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -196,14 +192,8 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 		var correctPredict int
 
 		// FIXME: reassignment of myNet for CoW problematic
-		correctPredict, myNet = myNet.PredictClass(
-			cowId,
-			records,
-			values,
-			sizes,
-			labels,
-			labelSize,
-		)
+		correctPredict, myNet =
+			myNet.PredictClass(cowId, records, values, labels)
 
 		totCorrect += correctPredict
 
