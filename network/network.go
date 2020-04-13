@@ -356,7 +356,7 @@ func (ne *Network) ProcessInput(
 				tmp = tmp.SetAdamAvgVelBias(cowId,
 					beta2*tmp.GetAdamAvgVelBias()+(1-beta2)*tmp.GetTBias()*tmp.GetTBias())
 				tmp = tmp.SetBias(cowId,
-					tmp.GetBias()+ratio*tmpLr*tmp.GetAdamAvgMomBias()/math.Sqrt(tmp.GetAdamAvgVelBias())+eps)
+					tmp.GetBias()+ratio*tmpLr*tmp.GetAdamAvgMomBias()/(math.Sqrt(tmp.GetAdamAvgVelBias())+eps))
 				tmp = tmp.SetTBias(cowId, 0)
 			} else {
 				tmp = tmp.CopyWeightsAndBiasFromMirror(cowId)
