@@ -105,11 +105,6 @@ func (n *Node) Weights() []float64 {
 	return n.base.weights
 }
 
-// Copies the given weights into the node (without cloning)
-func (n *Node) SetWeights(weights []float64) {
-	copy(n.base.weights, weights)
-}
-
 func (n *Node) Bias() float64 {
 	return n.base.bias
 }

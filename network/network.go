@@ -333,8 +333,7 @@ func (ne *Network) ProcessInput(
 		for m := 0; m < n.hiddenLayers[l].NumOfNodes(); m++ {
 			tmp := n.hiddenLayers[l].GetNodeById(m)
 			dim := tmp.Dim()
-			localWeights := make([]float64, dim)
-			copy(localWeights, tmp.Weights())
+			curWeights := tmp.Weights()
 
 			if configuration.Global.UseAdam {
 				for d := 0; d < dim; d++ {
@@ -345,7 +344,8 @@ func (ne *Network) ProcessInput(
 					mom = beta1*mom + (1-beta1)*t
 					vel = beta2*vel + (1-beta2)*t*t
 
-					localWeights[d] += ratio * tmpLr * mom / (math.Sqrt(vel) + eps)
+					// Direclty modify the weight (by reference)
+					curWeights[d] += ratio * tmpLr * mom / (math.Sqrt(vel) + eps)
 					tmp = tmp.SetAdamAvgMom(cowId, d, mom)
 					tmp = tmp.SetAdamAvgVel(cowId, d, vel)
 					tmp = tmp.SetT(cowId, d, 0)
@@ -364,12 +364,10 @@ func (ne *Network) ProcessInput(
 
 			// FIXME: now tmp was modified and should be set back into hiddenLayers[l]
 			if tmpRehash {
-				hashes := n.hiddenLayers[l].GetHashForInputProcessing(localWeights)
+				hashes := n.hiddenLayers[l].GetHashForInputProcessing(curWeights)
 				hashIndices := n.hiddenLayers[l].HashesToIndex(hashes)
 				n.hiddenLayers[l].HashTablesAdd(hashIndices, m+1)
 			}
-
-			tmp.SetWeights(localWeights)
 		}
 
 	}
