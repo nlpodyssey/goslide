@@ -89,8 +89,8 @@ func (lsh *LSH) HashesToIndex(hashes []int) []int {
 				h := uint(hashes[lsh.k*i+j])
 				index += h << ((lsh.k - 1 - j) * logBinSize)
 			case configuration.DensifiedMinhashFunction:
-				randVal := lsh.rand1[lsh.k*i+j]
-				h := uint(randVal * randVal)
+				randVal := uint(lsh.rand1[lsh.k*i+j])
+				h := randVal * randVal
 				h ^= h >> 13
 				h ^= uint(lsh.rand1[lsh.k*i+j])
 				index += h * uint(hashes[lsh.k*i+j])
@@ -101,7 +101,7 @@ func (lsh *LSH) HashesToIndex(hashes []int) []int {
 		}
 
 		if hashFunction == configuration.DensifiedMinhashFunction {
-			index = index & ((1 << lsh.rangePow) - 1)
+			index &= ((1 << lsh.rangePow) - 1)
 		}
 
 		indices[i] = int(index)
