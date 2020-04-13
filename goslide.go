@@ -5,15 +5,13 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/nlpodyssey/goslide/configuration"
+	"github.com/nlpodyssey/goslide/corpusio/xcrepo"
 	"github.com/nlpodyssey/goslide/network"
 	"github.com/nlpodyssey/goslide/node"
 )
@@ -92,10 +90,7 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-
-	// skip header
-	scanner.Scan()
+	scanner := xcrepo.NewScanner(file)
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
@@ -109,48 +104,18 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 		sizes := make([]int, config.BatchSize)
 		labels := make([][]int, config.BatchSize)
 		labelSize := make([]int, config.BatchSize)
-		nonZeros := 0
-		count := 0
 
-		for scanner.Scan() {
-			label, list, value := parseLine(scanner.Text())
+		for count := 0; scanner.Scan() && count < config.BatchSize; count++ {
+			labels[count] = scanner.Labels()
+			labelSize[count] = scanner.LabelsLength()
 
-			nonZeros += len(list)
-			records[count] = make([]int, len(list))
-			values[count] = make([]float64, len(list))
-			labels[count] = make([]int, len(label))
-			sizes[count] = len(list)
-			labelSize[count] = len(label)
-
-			for currCount, currValue := range list {
-				records[count][currCount], err = strconv.Atoi(currValue)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			for currCount, currValue := range value {
-				values[count][currCount], err = strconv.ParseFloat(currValue, 64)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			for currCount, currValue := range label {
-				labels[count][currCount], err = strconv.Atoi(currValue)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			count++
-			if count >= config.BatchSize {
-				break
-			}
+			sizes[count] = scanner.FeaturesLength()
+			records[count] = scanner.FeatureIndices()
+			values[count] = scanner.FeatureValues()
 		}
 
 		if err := scanner.Err(); err != nil {
-			log.Fatal(err)
+			log.Printf("Error at line %d. %v", scanner.LineNumber(), err)
 		}
 
 		rehash := false
@@ -197,10 +162,7 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-
-	// skip header
-	scanner.Scan()
+	scanner := xcrepo.NewScanner(file)
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
@@ -211,44 +173,18 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 		sizes := make([]int, config.BatchSize)
 		labels := make([][]int, config.BatchSize)
 		labelSize := make([]int, config.BatchSize)
-		nonZeros := 0
-		count := 0
 
-		for scanner.Scan() {
-			label, list, value := parseLine(scanner.Text())
+		for count := 0; scanner.Scan() && count < config.BatchSize; count++ {
+			labels[count] = scanner.Labels()
+			labelSize[count] = scanner.LabelsLength()
 
-			nonZeros += len(list)
-			records[count] = make([]int, len(list))
-			values[count] = make([]float64, len(list))
-			labels[count] = make([]int, len(label))
-			sizes[count] = len(list)
-			labelSize[count] = len(label)
+			sizes[count] = scanner.FeaturesLength()
+			records[count] = scanner.FeatureIndices()
+			values[count] = scanner.FeatureValues()
+		}
 
-			for currCount, currValue := range list {
-				records[count][currCount], err = strconv.Atoi(currValue)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			for currCount, currValue := range value {
-				values[count][currCount], err = strconv.ParseFloat(currValue, 64)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			for currCount, currValue := range label {
-				labels[count][currCount], err = strconv.Atoi(currValue)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			count++
-			if count >= config.BatchSize {
-				break
-			}
+		if err := scanner.Err(); err != nil {
+			log.Printf("Error at line %d. %v", scanner.LineNumber(), err)
 		}
 
 		numFeatures := 0
@@ -284,26 +220,6 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 
 	fmt.Printf("%d %v %f\n",
 		iter, globalTime, float64(totCorrect)/(float64(numBatchesTest)*float64(config.BatchSize)))
-}
-
-func parseLine(line string) (label, list, value []string) {
-	spl := strings.Split(line, " ")
-
-	label = make([]string, 0)
-	list = make([]string, 0)
-	value = make([]string, 0)
-
-	for _, s := range strings.Split(spl[0], ",") {
-		label = append(label, s)
-	}
-
-	for _, s := range spl[1:len(spl)] {
-		spl2 := strings.Split(s, ":")
-		list = append(list, spl2[0])
-		value = append(value, spl2[1])
-	}
-
-	return
 }
 
 func validateArguments() {
