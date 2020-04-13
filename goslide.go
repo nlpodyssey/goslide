@@ -96,9 +96,10 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 	}
 
 	for i := 0; i < numBatches; i++ {
-		if (i+epoch*numBatches)%config.Stepsize == 0 {
+		if i > 0 && (i+epoch*numBatches)%config.Stepsize == 0 {
 			evalDataSvm(cowId, 20, myNet, epoch*numBatches+i)
 		}
+
 		records := make([][]int, config.BatchSize)
 		values := make([][]float64, config.BatchSize)
 		sizes := make([]int, config.BatchSize)
