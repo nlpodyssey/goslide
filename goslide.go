@@ -106,10 +106,10 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 		labels := make([][]int, config.BatchSize)
 		labelSize := make([]int, config.BatchSize)
 
-		for count := 0; scanner.Scan() && count < config.BatchSize; count++ {
 			labels[count] = scanner.Labels()
 			labelSize[count] = scanner.LabelsLength()
 
+		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
 			sizes[count] = scanner.FeaturesLength()
 			records[count] = scanner.FeatureIndices()
 			values[count] = scanner.FeatureValues()
@@ -175,10 +175,9 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 		labels := make([][]int, config.BatchSize)
 		labelSize := make([]int, config.BatchSize)
 
-		for count := 0; scanner.Scan() && count < config.BatchSize; count++ {
-			labels[count] = scanner.Labels()
 			labelSize[count] = scanner.LabelsLength()
 
+		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
 			sizes[count] = scanner.FeaturesLength()
 			records[count] = scanner.FeatureIndices()
 			values[count] = scanner.FeatureValues()
