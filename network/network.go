@@ -160,11 +160,11 @@ func (ne *Network) PredictClass(
 
 	// TODO: parallel!
 	for i := 0; i < n.currentBatchSize; i++ {
-		activeNoodesPerLayer := make([][]int, n.numberOfLayers+1)
+		activeNodesPerLayer := make([][]int, n.numberOfLayers+1)
 		activeValuesPerLayer := make([][]float64, n.numberOfLayers+1)
 		sizes := make([]int, n.numberOfLayers+1)
 
-		activeNoodesPerLayer[0] = inputIndices[i]
+		activeNodesPerLayer[0] = inputIndices[i]
 		activeValuesPerLayer[0] = inputValues[i]
 		sizes[0] = length[i]
 
@@ -173,7 +173,7 @@ func (ne *Network) PredictClass(
 			_, n.hiddenLayers[j] =
 				n.hiddenLayers[j].QueryActiveNodeAndComputeActivations(
 					cowId,
-					activeNoodesPerLayer,
+					activeNodesPerLayer,
 					activeValuesPerLayer,
 					sizes,
 					j,
@@ -190,10 +190,10 @@ func (ne *Network) PredictClass(
 		predictClass := -1
 		for k := 0; k < numOfClasses; k++ {
 			curAct := n.hiddenLayers[n.numberOfLayers-1].GetNodeById(
-				activeNoodesPerLayer[n.numberOfLayers][k]).GetLastActivation(i)
+				activeNodesPerLayer[n.numberOfLayers][k]).GetLastActivation(i)
 			if maxAct < curAct {
 				maxAct = curAct
-				predictClass = activeNoodesPerLayer[n.numberOfLayers][k]
+				predictClass = activeNodesPerLayer[n.numberOfLayers][k]
 			}
 		}
 
@@ -248,16 +248,16 @@ func (ne *Network) ProcessInput(
 
 	// TODO: parallel!
 	for i := 0; i < n.currentBatchSize; i++ {
-		activeNoodesPerLayer := make([][]int, n.numberOfLayers+1)
+		activeNodesPerLayer := make([][]int, n.numberOfLayers+1)
 		activeValuesPerLayer := make([][]float64, n.numberOfLayers+1)
 		sizes := make([]int, n.numberOfLayers+1)
 
-		activeNodesPerBatch[i] = activeNoodesPerLayer
+		activeNodesPerBatch[i] = activeNodesPerLayer
 		activeValuesPerBatch[i] = activeValuesPerLayer
 		sizesPerBatch[i] = sizes
 
 		// inputs parsed from training data file
-		activeNoodesPerLayer[0] = inputIndices[i]
+		activeNodesPerLayer[0] = inputIndices[i]
 		activeValuesPerLayer[0] = inputValues[i]
 		sizes[0] = lengths[i]
 
@@ -265,7 +265,7 @@ func (ne *Network) ProcessInput(
 			var in int
 			in, n.hiddenLayers[j] = n.hiddenLayers[j].QueryActiveNodeAndComputeActivations(
 				cowId,
-				activeNoodesPerLayer,
+				activeNodesPerLayer,
 				activeValuesPerLayer,
 				sizes,
 				j,
