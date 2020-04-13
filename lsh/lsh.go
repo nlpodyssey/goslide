@@ -53,10 +53,9 @@ func New(k, l, rangePow int) *LSH {
 }
 
 func (lsh *LSH) Clear() {
-	for i := range lsh.buckets {
-		lsh.buckets[i] = make([]*bucket.Bucket, 1<<lsh.rangePow)
-		for j := range lsh.buckets[i] {
-			lsh.buckets[i][j] = bucket.New()
+	for _, buckets := range lsh.buckets {
+		for _, bucket := range buckets {
+			bucket.Reset()
 		}
 	}
 }
