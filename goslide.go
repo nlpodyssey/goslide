@@ -99,20 +99,18 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 		if i > 0 && (i+epoch*numBatches)%config.Stepsize == 0 {
 			evalDataSvm(cowId, 20, myNet, epoch*numBatches+i)
 		}
-
 		records := make([][]int, config.BatchSize)
 		values := make([][]float64, config.BatchSize)
 		sizes := make([]int, config.BatchSize)
 		labels := make([][]int, config.BatchSize)
 		labelSize := make([]int, config.BatchSize)
 
-			labels[count] = scanner.Labels()
-			labelSize[count] = scanner.LabelsLength()
-
 		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
 			sizes[count] = scanner.FeaturesLength()
 			records[count] = scanner.FeatureIndices()
 			values[count] = scanner.FeatureValues()
+			labels[count] = scanner.Labels()
+			labelSize[count] = scanner.LabelsLength()
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -174,24 +172,22 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 		sizes := make([]int, config.BatchSize)
 		labels := make([][]int, config.BatchSize)
 		labelSize := make([]int, config.BatchSize)
-
-			labelSize[count] = scanner.LabelsLength()
+		numFeatures := 0
+		numLabels := 0
 
 		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
 			sizes[count] = scanner.FeaturesLength()
 			records[count] = scanner.FeatureIndices()
 			values[count] = scanner.FeatureValues()
+			labels[count] = scanner.Labels()
+			labelSize[count] = scanner.LabelsLength()
+
+			numFeatures += scanner.FeaturesLength()
+			numLabels += scanner.LabelsLength()
 		}
 
 		if err := scanner.Err(); err != nil {
 			log.Printf("Error at line %d. %v", scanner.LineNumber(), err)
-		}
-
-		numFeatures := 0
-		numLabels := 0
-		for i := 0; i < config.BatchSize; i++ {
-			numFeatures += sizes[i]
-			numLabels += labelSize[i]
 		}
 
 		fmt.Printf("%d records, with %d features and %d labels\n",
