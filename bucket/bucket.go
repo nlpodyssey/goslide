@@ -9,6 +9,8 @@ import "math/rand"
 const bucketSize = 128
 const fifo = true
 
+var resetArr = make([]int, bucketSize)
+
 type Bucket struct {
 	arr    []int
 	isInit int
@@ -23,6 +25,13 @@ func New() *Bucket {
 		index:  0,
 		counts: 0,
 	}
+}
+
+func (b *Bucket) Reset() {
+	copy(b.arr, resetArr)
+	b.isInit = -1
+	b.index = 0
+	b.counts = 0
 }
 
 func (b *Bucket) GetSize() int {
