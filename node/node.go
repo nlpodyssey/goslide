@@ -417,7 +417,6 @@ func (nd *Node) BackPropagateFirstLayer(
 	cowId int,
 	nnzIndices []int,
 	nnzValues []float64,
-	nnzSize int,
 	learningRate float64,
 	inputId int,
 ) *Node {
@@ -429,7 +428,7 @@ func (nd *Node) BackPropagateFirstLayer(
 	n.train[inputId] = n.train[inputId].cloneIfNeeded(cowId)
 	n.base = n.base.cloneIfNeeded(cowId)
 
-	for i := 0; i < nnzSize; i++ {
+	for i := range nnzIndices {
 		gradT := n.train[inputId].lastDeltaforBPs * nnzValues[i]
 		// TODO: ?? gradTsq := gradT * gradT
 		if configuration.Global.UseAdam {

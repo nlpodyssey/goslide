@@ -210,9 +210,7 @@ func (ne *Network) ProcessInput(
 	cowId int,
 	inputIndices [][]int,
 	inputValues [][]float64,
-	lengths []int,
 	labels [][]int,
-	labelSize []int,
 	iter int,
 	rehash bool,
 	rebuild bool,
@@ -257,7 +255,7 @@ func (ne *Network) ProcessInput(
 		// inputs parsed from training data file
 		activeNodesPerLayer[0] = inputIndices[i]
 		activeValuesPerLayer[0] = inputValues[i]
-		sizes[0] = lengths[i]
+		sizes[0] = len(inputIndices[i])
 
 		for j := 0; j < n.numberOfLayers; j++ {
 			var in int
@@ -309,7 +307,6 @@ func (ne *Network) ProcessInput(
 						cowId,
 						inputIndices[i],
 						inputValues[i],
-						lengths[i],
 						tmpLr,
 						i,
 					)

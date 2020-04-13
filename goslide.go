@@ -101,16 +101,12 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 		}
 		records := make([][]int, config.BatchSize)
 		values := make([][]float64, config.BatchSize)
-		sizes := make([]int, config.BatchSize)
 		labels := make([][]int, config.BatchSize)
-		labelSize := make([]int, config.BatchSize)
 
 		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
-			sizes[count] = scanner.FeaturesLength()
 			records[count] = scanner.FeatureIndices()
 			values[count] = scanner.FeatureValues()
 			labels[count] = scanner.Labels()
-			labelSize[count] = scanner.LabelsLength()
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -134,16 +130,7 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 
 		// logloss
 		_, myNet = myNet.ProcessInput(
-			cowId,
-			records,
-			values,
-			sizes,
-			labels,
-			labelSize,
-			epoch*numBatches+i,
-			rehash,
-			rebuild,
-		)
+			cowId, records, values, labels, epoch*numBatches+i, rehash, rebuild)
 
 		endTime := time.Now()
 		globalTime += endTime.Sub(startTime)
