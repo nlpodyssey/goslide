@@ -81,10 +81,6 @@ func (s *Scanner) Labels() []int {
 	return s.labels
 }
 
-func (s *Scanner) LabelsLength() int {
-	return len(s.labels)
-}
-
 func (s *Scanner) FeatureIndices() []int {
 	return s.featureIndices
 }
