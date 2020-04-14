@@ -559,7 +559,6 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 				cowId,
 				activeNodesPerLayer[layerIndex],
 				activeValuesPerLayer[layerIndex],
-				lengths[layerIndex],
 				inputId,
 			)
 		if l.nodeType == node.Softmax && activeValuesPerLayer[layerIndex+1][i] > maxValue {

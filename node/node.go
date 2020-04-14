@@ -287,7 +287,6 @@ func (nd *Node) GetActivation(
 	cowId int,
 	indices []int,
 	values []float64,
-	length int,
 	inputId int,
 ) (float64, *Node) {
 	if inputId > nd.base.currentBatchsize {
@@ -308,9 +307,9 @@ func (nd *Node) GetActivation(
 
 	n.train[inputId].lastActivations = 0
 
-	for i := 0; i < length; i++ {
+	for i, index := range indices {
 		n.train[inputId].lastActivations +=
-			n.base.weights[indices[i]] * values[i]
+			n.base.weights[index] * values[i]
 	}
 
 	n.train[inputId].lastActivations += n.base.bias
