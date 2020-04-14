@@ -193,6 +193,17 @@ func New(
 
 	// TODO: parallel!
 	for i := range newLayer.nodes {
+		var layerAdamAvgMom []float64 = nil
+		var layerAdamAvgVel []float64 = nil
+
+		firstIndex := previousLayerNumOfNodes * i
+		lastIndex := firstIndex + previousLayerNumOfNodes
+
+		if configuration.Global.UseAdam {
+			layerAdamAvgMom = newLayer.adamAvgMom[firstIndex:lastIndex]
+			layerAdamAvgVel = newLayer.adamAvgVel[firstIndex:lastIndex]
+		}
+
 		newLayer.nodes[i] = newLayer.nodes[i].Update(
 			cowId,
 			previousLayerNumOfNodes,
@@ -200,10 +211,10 @@ func New(
 			layerId,
 			nodeType,
 			batchSize,
-			newLayer.weights[previousLayerNumOfNodes*i:previousLayerNumOfNodes*i+previousLayerNumOfNodes],
+			newLayer.weights[firstIndex:lastIndex],
 			newLayer.bias[i],
-			newLayer.adamAvgMom[previousLayerNumOfNodes*i:previousLayerNumOfNodes*i+previousLayerNumOfNodes],
-			newLayer.adamAvgVel[previousLayerNumOfNodes*i:previousLayerNumOfNodes*i+previousLayerNumOfNodes],
+			layerAdamAvgMom,
+			layerAdamAvgVel,
 			newLayer.trainArray[batchSize*i:batchSize*i+batchSize],
 		)
 		newLayer.addToHashTable(

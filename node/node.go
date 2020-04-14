@@ -84,6 +84,7 @@ func NewNode(
 			weights:          weights,
 			bias:             bias,
 			mirrorBias:       bias,
+			mirrorWeights:    weights, // TODO: correct? not present in C++
 		},
 		train: make([]*NodeTrain, batchsize),
 	}
@@ -237,6 +238,7 @@ func (nd *Node) Update(
 	n.base.weights = weights
 	n.base.bias = bias
 	n.base.mirrorBias = bias
+	n.base.mirrorWeights = weights // TODO: correct? not present in C++
 
 	if configuration.Global.UseAdam {
 		n.base.adamAvgMom = adamAvgMom
