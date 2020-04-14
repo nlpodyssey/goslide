@@ -295,7 +295,6 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 	cowId int,
 	activeNodesPerLayer [][]int,
 	activeValuesPerLayer [][]float64,
-	lengths []int,
 	layerIndex int,
 	inputId int,
 	label []int,
@@ -312,7 +311,6 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 
 	if sparsity == 1.0 {
 		length = l.numOfNodes
-		lengths[layerIndex+1] = length
 		activeNodesPerLayer[layerIndex+1] = make([]int, length) // assuming not intitialized
 		for i := range activeNodesPerLayer[layerIndex+1] {
 			activeNodesPerLayer[layerIndex+1][i] = i
@@ -380,14 +378,12 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			}
 
 			length = len(vect)
-			lengths[layerIndex+1] = length
 			activeNodesPerLayer[layerIndex+1] = make([]int, length)
 			copy(activeNodesPerLayer[layerIndex+1], vect)
 			in = length
 		case configuration.LayerMode2:
 			if l.nodeType == node.Softmax {
 				length = int(math.Floor(float64(l.numOfNodes) * sparsity))
-				lengths[layerIndex+1] = length
 				activeNodesPerLayer[layerIndex+1] = make([]int, length)
 
 				bs := make([]bool, mapLen) // bitset
@@ -411,7 +407,6 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 		case configuration.LayerMode3:
 			if l.nodeType == node.Softmax {
 				length = int(math.Floor(float64(l.numOfNodes) * sparsity))
-				lengths[layerIndex+1] = length
 				activeNodesPerLayer[layerIndex+1] = make([]int, length)
 
 				sortW := make([]indexValuePair, 0)
@@ -529,7 +524,6 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			}
 
 			length = len(counts)
-			lengths[layerIndex+1] = length
 			activeNodesPerLayer[layerIndex+1] = make([]int, length)
 
 			// copy map into new array

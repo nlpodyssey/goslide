@@ -160,11 +160,9 @@ func (ne *Network) PredictClass(
 	for i := 0; i < n.currentBatchSize; i++ {
 		activeNodesPerLayer := make([][]int, n.numberOfLayers+1)
 		activeValuesPerLayer := make([][]float64, n.numberOfLayers+1)
-		sizes := make([]int, n.numberOfLayers+1)
 
 		activeNodesPerLayer[0] = inputIndices[i]
 		activeValuesPerLayer[0] = inputValues[i]
-		sizes[0] = len(inputIndices[i])
 
 		//inference
 		for j := 0; j < n.numberOfLayers; j++ {
@@ -173,7 +171,6 @@ func (ne *Network) PredictClass(
 					cowId,
 					activeNodesPerLayer,
 					activeValuesPerLayer,
-					sizes,
 					j,
 					i,
 					[]int{},
@@ -183,15 +180,14 @@ func (ne *Network) PredictClass(
 		}
 
 		//compute softmax
-		numOfClasses := sizes[n.numberOfLayers]
 		maxAct := -222222222.0 // TODO: ...
 		predictClass := -1
-		for k := 0; k < numOfClasses; k++ {
+		for _, nodeIndex := range activeNodesPerLayer[n.numberOfLayers] {
 			curAct := n.hiddenLayers[n.numberOfLayers-1].GetNodeById(
-				activeNodesPerLayer[n.numberOfLayers][k]).GetLastActivation(i)
+				nodeIndex).GetLastActivation(i)
 			if maxAct < curAct {
 				maxAct = curAct
-				predictClass = activeNodesPerLayer[n.numberOfLayers][k]
+				predictClass = nodeIndex
 			}
 		}
 
@@ -240,22 +236,18 @@ func (ne *Network) ProcessInput(
 
 	activeNodesPerBatch := make([][][]int, n.currentBatchSize)
 	activeValuesPerBatch := make([][][]float64, n.currentBatchSize)
-	sizesPerBatch := make([][]int, n.currentBatchSize)
 
 	// TODO: parallel!
 	for i := 0; i < n.currentBatchSize; i++ {
 		activeNodesPerLayer := make([][]int, n.numberOfLayers+1)
 		activeValuesPerLayer := make([][]float64, n.numberOfLayers+1)
-		sizes := make([]int, n.numberOfLayers+1)
 
 		activeNodesPerBatch[i] = activeNodesPerLayer
 		activeValuesPerBatch[i] = activeValuesPerLayer
-		sizesPerBatch[i] = sizes
 
 		// inputs parsed from training data file
 		activeNodesPerLayer[0] = inputIndices[i]
 		activeValuesPerLayer[0] = inputValues[i]
-		sizes[0] = len(inputIndices[i])
 
 		for j := 0; j < n.numberOfLayers; j++ {
 			var in int
@@ -263,7 +255,6 @@ func (ne *Network) ProcessInput(
 				cowId,
 				activeNodesPerLayer,
 				activeValuesPerLayer,
-				sizes,
 				j,
 				i,
 				labels[i],
@@ -278,8 +269,8 @@ func (ne *Network) ProcessInput(
 		for j := n.numberOfLayers - 1; j >= 0; j-- {
 			layer := n.hiddenLayers[j]
 			// nodes
-			for k := 0; k < sizesPerBatch[i][j+1]; k++ {
-				node := layer.GetNodeById(activeNodesPerBatch[i][j+1][k])
+			for _, nodeIndex := range activeNodesPerBatch[i][j+1] {
+				node := layer.GetNodeById(nodeIndex)
 				if j == n.numberOfLayers-1 {
 					//TODO: Compute Extra stats: labels[i];
 					// FIXME: we should reassign the cow-ed node into the layer
