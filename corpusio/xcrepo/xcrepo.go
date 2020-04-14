@@ -89,10 +89,6 @@ func (s *Scanner) FeatureValues() []float64 {
 	return s.featureValues
 }
 
-func (s *Scanner) FeaturesLength() int {
-	return len(s.featureIndices)
-}
-
 func (s *Scanner) Scan() bool {
 	if s.Err() != nil {
 		return false
