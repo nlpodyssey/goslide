@@ -4,7 +4,11 @@
 
 package wta_hash
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/nlpodyssey/goslide/index_value"
+)
 
 func TestWtaHashNew(t *testing.T) {
 	h := New(3, 10)
@@ -39,11 +43,33 @@ func TestWtaHashNew(t *testing.T) {
 func TestWtaHashGetHash(t *testing.T) {
 	h := New(3, 10)
 
-	a := h.GetHash([]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
-	b := h.GetHash([]float64{10, 20, 30, 40, 50, 60, 70, 80, 90, 100})
+	a := h.GetHash(
+		[]index_value.Pair{
+			{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5},
+			{5, 6}, {6, 7}, {7, 8}, {8, 9}, {9, 10},
+		},
+	)
+	b := h.GetHash([]index_value.Pair{
+		{0, 10}, {1, 20}, {2, 30}, {3, 40}, {4, 50},
+		{5, 60}, {6, 70}, {7, 80}, {8, 90}, {9, 100},
+	})
 	assertIntSliceEqual(t, a, b, "a and b must be the same")
 
-	c := h.GetHash([]float64{10, 9, 8, 7, 6, 5, 4, 3, 2, 1})
+	c := h.GetHash([]index_value.Pair{
+		{0, 10}, {1, 9}, {2, 8}, {3, 7}, {4, 6},
+		{5, 5}, {6, 4}, {7, 3}, {8, 2}, {9, 1},
+	})
+	assertIntSliceNotEqual(t, a, c, "a and c must differ")
+}
+
+func TestWtaHashGetHashDense(t *testing.T) {
+	h := New(3, 10)
+
+	a := h.GetHashDense([]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
+	b := h.GetHashDense([]float64{10, 20, 30, 40, 50, 60, 70, 80, 90, 100})
+	assertIntSliceEqual(t, a, b, "a and b must be the same")
+
+	c := h.GetHashDense([]float64{10, 9, 8, 7, 6, 5, 4, 3, 2, 1})
 	assertIntSliceNotEqual(t, a, c, "a and c must differ")
 }
 

@@ -9,6 +9,8 @@ import (
 	"math/rand"
 	"sort"
 	"time"
+
+	"github.com/nlpodyssey/goslide/index_value"
 )
 
 type SparseRandomProjection struct {
@@ -81,18 +83,17 @@ func (srp *SparseRandomProjection) GetHash(vector []float64) []int {
 }
 
 func (srp *SparseRandomProjection) GetHashSparse(
-	indices []int,
-	values []float64,
+	data []index_value.Pair,
 ) []int {
-	length := len(indices)
+	length := len(data)
 	hashes := make([]int, srp.numHashes)
 
 	for p := range hashes {
 		s := 0.0
 
 		for i, j := 0, 0; i < length && j < srp.samSize; {
-			if indices[i] == srp.indices[p][j] {
-				v := values[i]
+			if data[i].Index == srp.indices[p][j] {
+				v := data[i].Value
 				if srp.randBits[p][j] {
 					s += v
 				} else {
@@ -100,7 +101,7 @@ func (srp *SparseRandomProjection) GetHashSparse(
 				}
 				i++
 				j++
-			} else if indices[i] < srp.indices[p][j] {
+			} else if data[i].Index < srp.indices[p][j] {
 				i++
 			} else {
 				j++

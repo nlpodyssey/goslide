@@ -6,6 +6,7 @@ package node
 
 import (
 	"github.com/nlpodyssey/goslide/configuration"
+	"github.com/nlpodyssey/goslide/index_value"
 )
 
 type Node struct {
@@ -285,8 +286,7 @@ func (nd *Node) IncrementDelta(
 
 func (nd *Node) GetActivation(
 	cowId int,
-	indices []int,
-	values []float64,
+	data []index_value.Pair,
 	inputId int,
 ) (float64, *Node) {
 	if inputId > nd.base.currentBatchsize {
@@ -307,9 +307,9 @@ func (nd *Node) GetActivation(
 
 	n.train[inputId].lastActivations = 0
 
-	for i, index := range indices {
+	for _, pair := range data {
 		n.train[inputId].lastActivations +=
-			n.base.weights[index] * values[i]
+			n.base.weights[pair.Index] * pair.Value
 	}
 
 	n.train[inputId].lastActivations += n.base.bias
@@ -363,7 +363,7 @@ func (nd *Node) ComputeExtaStatsForSoftMax(
 func (nd *Node) BackPropagate(
 	cowId int,
 	previousNodes *[]*Node,
-	previousLayerActiveNodeIds []int,
+	previousLayerActiveNodes []index_value.Pair,
 	learningRate float64,
 	inputId int,
 ) *Node {
@@ -375,7 +375,9 @@ func (nd *Node) BackPropagate(
 	n.train[inputId] = n.train[inputId].cloneIfNeeded(cowId)
 	n.base = n.base.cloneIfNeeded(cowId)
 
-	for _, nodeId := range previousLayerActiveNodeIds {
+	for _, pair := range previousLayerActiveNodes {
+		var nodeId = pair.Index
+
 		// Update Delta before updating weights
 		prevNode := (*previousNodes)[nodeId].IncrementDelta(
 			cowId,
@@ -411,8 +413,7 @@ func (nd *Node) BackPropagate(
 
 func (nd *Node) BackPropagateFirstLayer(
 	cowId int,
-	nnzIndices []int,
-	nnzValues []float64,
+	indexValuePairs []index_value.Pair,
 	learningRate float64,
 	inputId int,
 ) *Node {
@@ -424,13 +425,13 @@ func (nd *Node) BackPropagateFirstLayer(
 	n.train[inputId] = n.train[inputId].cloneIfNeeded(cowId)
 	n.base = n.base.cloneIfNeeded(cowId)
 
-	for i := range nnzIndices {
-		gradT := n.train[inputId].lastDeltaforBPs * nnzValues[i]
+	for _, pair := range indexValuePairs {
+		gradT := n.train[inputId].lastDeltaforBPs * pair.Value
 		// TODO: ?? gradTsq := gradT * gradT
 		if configuration.Global.UseAdam {
-			n.base.t[nnzIndices[i]] += gradT
+			n.base.t[pair.Index] += gradT
 		} else {
-			n.base.mirrorWeights[nnzIndices[i]] += learningRate * gradT
+			n.base.mirrorWeights[pair.Index] += learningRate * gradT
 		}
 	}
 

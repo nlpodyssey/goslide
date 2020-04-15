@@ -4,7 +4,11 @@
 
 package sparse_random_projection
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/nlpodyssey/goslide/index_value"
+)
 
 func TestSparseRandomProjectionNew(t *testing.T) {
 	h := New(10, 3, 2)
@@ -40,8 +44,7 @@ func TestSparseRandomProjectionGetHashSparse(t *testing.T) {
 	// Just ensure no error is raised
 	h := New(10, 3, 2)
 	result := h.GetHashSparse(
-		[]int{0, 4, 7, 9},
-		[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+		[]index_value.Pair{{0, 1}, {4, 5}, {7, 8}, {9, 10}},
 	)
 	assertIntEqual(t, len(result), 3, "len(result)")
 }

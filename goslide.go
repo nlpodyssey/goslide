@@ -12,6 +12,7 @@ import (
 
 	"github.com/nlpodyssey/goslide/configuration"
 	"github.com/nlpodyssey/goslide/corpusio/xcrepo"
+	"github.com/nlpodyssey/goslide/index_value"
 	"github.com/nlpodyssey/goslide/network"
 	"github.com/nlpodyssey/goslide/node"
 )
@@ -99,13 +100,11 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 		if i > 0 && (i+epoch*numBatches)%config.Stepsize == 0 {
 			evalDataSvm(cowId, 20, myNet, epoch*numBatches+i)
 		}
-		records := make([][]int, config.BatchSize)
-		values := make([][]float64, config.BatchSize)
+		features := make([][]index_value.Pair, config.BatchSize)
 		labels := make([][]int, config.BatchSize)
 
 		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
-			records[count] = scanner.FeatureIndices()
-			values[count] = scanner.FeatureValues()
+			features[count] = scanner.Features()
 			labels[count] = scanner.Labels()
 		}
 
@@ -130,7 +129,7 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 
 		// logloss
 		_, myNet = myNet.ProcessInput(
-			cowId, records, values, labels, epoch*numBatches+i, rehash, rebuild)
+			cowId, features, labels, epoch*numBatches+i, rehash, rebuild)
 
 		endTime := time.Now()
 		globalTime += endTime.Sub(startTime)
@@ -154,18 +153,16 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 	}
 
 	for i := 0; i < numBatchesTest; i++ {
-		records := make([][]int, config.BatchSize)
-		values := make([][]float64, config.BatchSize)
+		features := make([][]index_value.Pair, config.BatchSize)
 		labels := make([][]int, config.BatchSize)
 		numFeatures := 0
 		numLabels := 0
 
 		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
-			records[count] = scanner.FeatureIndices()
-			values[count] = scanner.FeatureValues()
+			features[count] = scanner.Features()
 			labels[count] = scanner.Labels()
 
-			numFeatures += len(records[count])
+			numFeatures += len(features[count])
 			numLabels += len(labels[count])
 		}
 
@@ -180,7 +177,7 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 
 		// FIXME: reassignment of myNet for CoW problematic
 		correctPredict, myNet =
-			myNet.PredictClass(cowId, records, values, labels)
+			myNet.PredictClass(cowId, features, labels)
 
 		totCorrect += correctPredict
 

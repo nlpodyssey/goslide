@@ -14,6 +14,8 @@ import (
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/nlpodyssey/goslide/index_value"
 )
 
 // The number of times the range is larger than
@@ -70,7 +72,7 @@ func New(numHashes, numOfBitsToHash int) *DensifiedWtaHash {
 	}
 }
 
-func (dw *DensifiedWtaHash) GetHash(indices []int, data []float64) []int {
+func (dw *DensifiedWtaHash) GetHash(data []index_value.Pair) []int {
 	hashes := make([]int, dw.numHashes)
 	hashArray := make([]int, dw.numHashes)
 	values := make([]float64, dw.numHashes)
@@ -81,11 +83,13 @@ func (dw *DensifiedWtaHash) GetHash(indices []int, data []float64) []int {
 	}
 
 	for p := 0; p < dw.permute; p++ {
-		for i, dataValue := range data {
-			binId := dw.indices[p*dw.rangePow+indices[i]]
-			if binId < dw.numHashes && values[binId] < dataValue {
-				values[binId] = dataValue
-				hashes[binId] = dw.pos[p*dw.rangePow+indices[i]]
+		binIndex := p * dw.rangePow
+		for i, pair := range data {
+			innerIndex := binIndex + i
+			binId := dw.indices[innerIndex]
+			if binId < dw.numHashes && values[binId] < pair.Value {
+				values[binId] = pair.Value
+				hashes[binId] = dw.pos[innerIndex]
 			}
 		}
 	}

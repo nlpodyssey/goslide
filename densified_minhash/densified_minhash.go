@@ -11,6 +11,8 @@ import (
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/nlpodyssey/goslide/index_value"
 )
 
 type DensifiedMinhash struct {
@@ -77,6 +79,64 @@ func (dm *DensifiedMinhash) GetHash(
 }
 
 func (dm *DensifiedMinhash) GetHashEasy(
+	binIds []int,
+	data []index_value.Pair,
+	topK int,
+) []int {
+	// Read the data and add it to priority queue O(dlogk approx 7d)
+	// with index as key and values as priority value, get topk index
+	// O(1) and apply minhash on retuned index.
+	pq := make(indexValuePriorityQueue, topK, topK+1)
+	for index, value := range data[0:topK] {
+		pq[index] = indexValuePair{index, value.Value}
+	}
+	heap.Init(&pq)
+
+	dataLen := len(data)
+	for index := topK; index < dataLen; index++ {
+		heap.Push(&pq, indexValuePair{index, data[index].Value})
+		heap.Pop(&pq)
+	}
+
+	hashes := make([]int, dm.numHashes)
+	hashArray := make([]int, dm.numHashes)
+
+	for i := range hashes {
+		hashes[i] = math.MinInt64
+	}
+
+	for i := 0; i < topK; i++ {
+		pair := pq.Pop().(indexValuePair)
+		index := pair.index
+		binId := binIds[index]
+		if hashes[binId] < index {
+			hashes[binId] = index
+		}
+	}
+
+	for i, next := range hashes {
+		if next != math.MinInt64 {
+			hashArray[i] = next
+			continue
+		}
+
+		for count := 1; next == math.MinInt64; count++ {
+			index := minInt(dm.GetRandDoubleHash(i, count), dm.numHashes-1)
+			next = hashes[index] // Kills GPU.
+
+			if count > 100 { // Densification failure.
+				break
+			}
+		}
+
+		hashArray[i] = next
+	}
+
+	return hashArray
+}
+
+// TODO: avoid code duplication
+func (dm *DensifiedMinhash) GetHashEasyDense(
 	binIds []int,
 	data []float64,
 	topK int,

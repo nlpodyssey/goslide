@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nlpodyssey/goslide/configuration"
+	"github.com/nlpodyssey/goslide/index_value"
 	"github.com/nlpodyssey/goslide/layer"
 	"github.com/nlpodyssey/goslide/node"
 )
@@ -147,8 +148,7 @@ func (n *Network) GetLayer(layerId int) *layer.Layer {
 
 func (ne *Network) PredictClass(
 	cowId int,
-	inputIndices [][]int,
-	inputValues [][]float64,
+	features [][]index_value.Pair,
 	labels [][]int,
 ) (int, *Network) {
 	n := ne.cloneIfNeeded(cowId)
@@ -158,11 +158,8 @@ func (ne *Network) PredictClass(
 
 	// TODO: parallel!
 	for i := 0; i < n.currentBatchSize; i++ {
-		activeNodesPerLayer := make([][]int, n.numberOfLayers+1)
-		activeValuesPerLayer := make([][]float64, n.numberOfLayers+1)
-
-		activeNodesPerLayer[0] = inputIndices[i]
-		activeValuesPerLayer[0] = inputValues[i]
+		activeNodesPerLayer := make([][]index_value.Pair, n.numberOfLayers+1)
+		activeNodesPerLayer[0] = features[i]
 
 		//inference
 		for j := 0; j < n.numberOfLayers; j++ {
@@ -170,7 +167,6 @@ func (ne *Network) PredictClass(
 				n.hiddenLayers[j].QueryActiveNodeAndComputeActivations(
 					cowId,
 					activeNodesPerLayer,
-					activeValuesPerLayer,
 					j,
 					i,
 					[]int{},
@@ -182,12 +178,12 @@ func (ne *Network) PredictClass(
 		//compute softmax
 		maxAct := -222222222.0 // TODO: ...
 		predictClass := -1
-		for _, nodeIndex := range activeNodesPerLayer[n.numberOfLayers] {
+		for _, pair := range activeNodesPerLayer[n.numberOfLayers] {
 			curAct := n.hiddenLayers[n.numberOfLayers-1].GetNodeById(
-				nodeIndex).GetLastActivation(i)
+				pair.Index).GetLastActivation(i)
 			if maxAct < curAct {
 				maxAct = curAct
-				predictClass = nodeIndex
+				predictClass = pair.Index
 			}
 		}
 
@@ -204,8 +200,7 @@ func (ne *Network) PredictClass(
 
 func (ne *Network) ProcessInput(
 	cowId int,
-	inputIndices [][]int,
-	inputValues [][]float64,
+	features [][]index_value.Pair,
 	labels [][]int,
 	iter int,
 	rehash bool,
@@ -234,27 +229,19 @@ func (ne *Network) ProcessInput(
 		// TODO: ?? else: tmplr *= pow(0.9, iter/10.0);
 	}
 
-	activeNodesPerBatch := make([][][]int, n.currentBatchSize)
-	activeValuesPerBatch := make([][][]float64, n.currentBatchSize)
+	activeNodesPerBatch := make([][][]index_value.Pair, n.currentBatchSize)
 
 	// TODO: parallel!
 	for i := 0; i < n.currentBatchSize; i++ {
-		activeNodesPerLayer := make([][]int, n.numberOfLayers+1)
-		activeValuesPerLayer := make([][]float64, n.numberOfLayers+1)
-
+		activeNodesPerLayer := make([][]index_value.Pair, n.numberOfLayers+1)
 		activeNodesPerBatch[i] = activeNodesPerLayer
-		activeValuesPerBatch[i] = activeValuesPerLayer
-
-		// inputs parsed from training data file
-		activeNodesPerLayer[0] = inputIndices[i]
-		activeValuesPerLayer[0] = inputValues[i]
+		activeNodesPerLayer[0] = features[i]
 
 		for j := 0; j < n.numberOfLayers; j++ {
 			var in int
 			in, n.hiddenLayers[j] = n.hiddenLayers[j].QueryActiveNodeAndComputeActivations(
 				cowId,
 				activeNodesPerLayer,
-				activeValuesPerLayer,
 				j,
 				i,
 				labels[i],
@@ -269,8 +256,8 @@ func (ne *Network) ProcessInput(
 		for j := n.numberOfLayers - 1; j >= 0; j-- {
 			layer := n.hiddenLayers[j]
 			// nodes
-			for _, nodeIndex := range activeNodesPerBatch[i][j+1] {
-				node := layer.GetNodeById(nodeIndex)
+			for _, pair := range activeNodesPerBatch[i][j+1] {
+				node := layer.GetNodeById(pair.Index)
 				if j == n.numberOfLayers-1 {
 					//TODO: Compute Extra stats: labels[i];
 					// FIXME: we should reassign the cow-ed node into the layer
@@ -296,8 +283,7 @@ func (ne *Network) ProcessInput(
 					// FIXME: we should reassign the cow-ed node into the layer
 					node.BackPropagateFirstLayer(
 						cowId,
-						inputIndices[i],
-						inputValues[i],
+						features[i],
 						tmpLr,
 						i,
 					)

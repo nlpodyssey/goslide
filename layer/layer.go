@@ -14,6 +14,7 @@ import (
 	"github.com/nlpodyssey/goslide/configuration"
 	"github.com/nlpodyssey/goslide/densified_minhash"
 	"github.com/nlpodyssey/goslide/densified_wta_hash"
+	"github.com/nlpodyssey/goslide/index_value"
 	"github.com/nlpodyssey/goslide/lsh"
 	"github.com/nlpodyssey/goslide/node"
 	"github.com/nlpodyssey/goslide/sparse_random_projection"
@@ -293,8 +294,7 @@ func (l *Layer) GetNomalizationConstant(inputId int) float64 {
 
 func (la *Layer) QueryActiveNodeAndComputeActivations(
 	cowId int,
-	activeNodesPerLayer [][]int,
-	activeValuesPerLayer [][]float64,
+	activeNodesPerLayer [][]index_value.Pair,
 	layerIndex int,
 	inputId int,
 	label []int,
@@ -302,6 +302,8 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 	iter int,
 ) (int, *Layer) {
 	l := la.cloneIfNeeded(cowId)
+
+	currentLayerActiveNodes := activeNodesPerLayer[layerIndex]
 
 	//LSH QueryLogic
 
@@ -311,9 +313,10 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 
 	if sparsity == 1.0 {
 		length = l.numOfNodes
-		activeNodesPerLayer[layerIndex+1] = make([]int, length) // assuming not intitialized
+		// assuming not intitialized
+		activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
 		for i := range activeNodesPerLayer[layerIndex+1] {
-			activeNodesPerLayer[layerIndex+1][i] = i
+			activeNodesPerLayer[layerIndex+1][i].Index = i
 		}
 	} else {
 		switch configuration.Global.LayerMode {
@@ -322,21 +325,17 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 
 			switch configuration.Global.HashFunction {
 			case configuration.WtaHashFunction:
-				hashes = l.wtaHasher.GetHash(activeValuesPerLayer[layerIndex])
+				hashes = l.wtaHasher.GetHash(currentLayerActiveNodes)
 
 			case configuration.DensifiedWtaHashFunction:
-				hashes = l.dwtaHasher.GetHash(
-					activeNodesPerLayer[layerIndex],
-					activeValuesPerLayer[layerIndex])
+				hashes = l.dwtaHasher.GetHash(currentLayerActiveNodes)
 
 			case configuration.DensifiedMinhashFunction:
 				hashes = l.minHasher.GetHashEasy(
-					l.binIds, activeValuesPerLayer[layerIndex], topK)
+					l.binIds, currentLayerActiveNodes, topK)
 
 			case configuration.SparseRandomProjectionHashFunction:
-				hashes = l.srp.GetHashSparse(
-					activeNodesPerLayer[layerIndex],
-					activeValuesPerLayer[layerIndex])
+				hashes = l.srp.GetHashSparse(currentLayerActiveNodes)
 
 			default:
 				panic(fmt.Sprintf("Unexpected hash function %d.",
@@ -370,27 +369,27 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			}
 
 			// thresholding
-			vect := make([]int, 0)
+			vect := make([]index_value.Pair, 0)
 			for index, count := range counts {
 				if count > threshold {
-					vect = append(vect, index)
+					vect = append(vect, index_value.Pair{Index: index})
 				}
 			}
 
 			length = len(vect)
-			activeNodesPerLayer[layerIndex+1] = make([]int, length)
+			activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
 			copy(activeNodesPerLayer[layerIndex+1], vect)
 			in = length
 		case configuration.LayerMode2:
 			if l.nodeType == node.Softmax {
 				length = int(math.Floor(float64(l.numOfNodes) * sparsity))
-				activeNodesPerLayer[layerIndex+1] = make([]int, length)
+				activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
 
 				bs := make([]bool, mapLen) // bitset
 				tmpSize := 0
 				if l.nodeType == node.Softmax && len(label) > 0 {
 					for i, labelValue := range label {
-						activeNodesPerLayer[layerIndex+1][i] = labelValue
+						activeNodesPerLayer[layerIndex+1][i].Index = labelValue
 						bs[labelValue] = true
 					}
 					tmpSize = len(label)
@@ -398,7 +397,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 				for tmpSize < length {
 					v := rand.Intn(l.numOfNodes)
 					if !bs[v] {
-						activeNodesPerLayer[layerIndex+1][tmpSize] = v
+						activeNodesPerLayer[layerIndex+1][tmpSize].Index = v
 						bs[v] = true
 						tmpSize++
 					}
@@ -407,13 +406,13 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 		case configuration.LayerMode3:
 			if l.nodeType == node.Softmax {
 				length = int(math.Floor(float64(l.numOfNodes) * sparsity))
-				activeNodesPerLayer[layerIndex+1] = make([]int, length)
+				activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
 
 				sortW := make([]indexValuePair, 0)
 				what := 0
 				for s, curNode := range l.nodes {
-					tmp := l.innerproduct(activeNodesPerLayer[layerIndex],
-						activeValuesPerLayer[layerIndex], curNode.Weights())
+					tmp := l.innerproduct(
+						currentLayerActiveNodes, curNode.Weights())
 					tmp += curNode.Bias()
 
 					if intSliceContains(label, s) {
@@ -433,7 +432,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 				sort.Sort(indexValuePairByValue(sortW))
 
 				for i, sw := range sortW {
-					activeNodesPerLayer[layerIndex+1][i] = sw.index
+					activeNodesPerLayer[layerIndex+1][i].Index = sw.index
 					if intSliceContains(label, sw.index) {
 						in = 1
 					}
@@ -446,21 +445,17 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 
 			switch configuration.Global.HashFunction {
 			case configuration.WtaHashFunction:
-				hashes = l.wtaHasher.GetHash(activeValuesPerLayer[layerIndex])
+				hashes = l.wtaHasher.GetHash(currentLayerActiveNodes)
 
 			case configuration.DensifiedWtaHashFunction:
-				hashes = l.dwtaHasher.GetHash(
-					activeNodesPerLayer[layerIndex],
-					activeValuesPerLayer[layerIndex])
+				hashes = l.dwtaHasher.GetHash(currentLayerActiveNodes)
 
 			case configuration.DensifiedMinhashFunction:
 				hashes = l.minHasher.GetHashEasy(
-					l.binIds, activeValuesPerLayer[layerIndex], topK)
+					l.binIds, currentLayerActiveNodes, topK)
 
 			case configuration.SparseRandomProjectionHashFunction:
-				hashes = l.srp.GetHashSparse(
-					activeNodesPerLayer[layerIndex],
-					activeValuesPerLayer[layerIndex])
+				hashes = l.srp.GetHashSparse(currentLayerActiveNodes)
 
 			default:
 				panic(fmt.Sprintf("Unexpected hash function %d.",
@@ -524,12 +519,12 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			}
 
 			length = len(counts)
-			activeNodesPerLayer[layerIndex+1] = make([]int, length)
+			activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
 
 			// copy map into new array
 			i := 0
 			for index := range counts {
-				activeNodesPerLayer[layerIndex+1][i] = index
+				activeNodesPerLayer[layerIndex+1][i].Index = index
 				i++
 			}
 		}
@@ -537,8 +532,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 
 	// ***********************************
 
-	activeValuesPerLayer[layerIndex+1] = make([]float64, length)
-	// assuming its not initialized else memory leak;
+	nextLayerActiveNodes := activeNodesPerLayer[layerIndex+1]
 
 	maxValue := 0.0
 	if l.nodeType == node.Softmax {
@@ -546,27 +540,24 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 	}
 
 	// find activation for all ACTIVE nodes in layer
-	for i := 0; i < length; i++ {
-		activeValuesPerLayer[layerIndex+1][i],
-			l.nodes[activeNodesPerLayer[layerIndex+1][i]] =
-			l.nodes[activeNodesPerLayer[layerIndex+1][i]].GetActivation(
-				cowId,
-				activeNodesPerLayer[layerIndex],
-				activeValuesPerLayer[layerIndex],
-				inputId,
+	for i, pair := range nextLayerActiveNodes {
+		var value float64
+		value, l.nodes[pair.Index] =
+			l.nodes[pair.Index].GetActivation(
+				cowId, currentLayerActiveNodes, inputId,
 			)
-		if l.nodeType == node.Softmax && activeValuesPerLayer[layerIndex+1][i] > maxValue {
-			maxValue = activeValuesPerLayer[layerIndex+1][i]
+		nextLayerActiveNodes[i].Value = value
+		if l.nodeType == node.Softmax && value > maxValue {
+			maxValue = value
 		}
 	}
 
 	if l.nodeType == node.Softmax {
 		for i := 0; i < length; i++ {
-			realActivation :=
-				math.Exp(activeValuesPerLayer[layerIndex+1][i] - maxValue)
-			activeValuesPerLayer[layerIndex+1][i] = realActivation
-			l.nodes[activeNodesPerLayer[layerIndex+1][i]] =
-				l.nodes[activeNodesPerLayer[layerIndex+1][i]].SetlastActivation(
+			realActivation := math.Exp(nextLayerActiveNodes[i].Value - maxValue)
+			nextLayerActiveNodes[i].Value = realActivation
+			l.nodes[nextLayerActiveNodes[i].Index] =
+				l.nodes[nextLayerActiveNodes[i].Index].SetlastActivation(
 					cowId, inputId, realActivation,
 				)
 			l.normalizationConstants[inputId] += realActivation
@@ -588,13 +579,13 @@ func (l *Layer) GetHashForInputProcessing(weights []float64) []int {
 	// TODO: duplicated code
 	switch configuration.Global.HashFunction {
 	case configuration.WtaHashFunction:
-		return l.wtaHasher.GetHash(weights)
+		return l.wtaHasher.GetHashDense(weights)
 
 	case configuration.DensifiedWtaHashFunction:
 		return l.dwtaHasher.GetHashEasy(weights, topK)
 
 	case configuration.DensifiedMinhashFunction:
-		return l.minHasher.GetHashEasy(l.binIds, weights, topK)
+		return l.minHasher.GetHashEasyDense(l.binIds, weights, topK)
 
 	case configuration.SparseRandomProjectionHashFunction:
 		return l.srp.GetHash(weights)
@@ -624,13 +615,13 @@ func (l *Layer) addToHashTable(
 
 	switch configuration.Global.HashFunction {
 	case configuration.WtaHashFunction:
-		hashes = l.wtaHasher.GetHash(weights)
+		hashes = l.wtaHasher.GetHashDense(weights)
 
 	case configuration.DensifiedWtaHashFunction:
 		hashes = l.dwtaHasher.GetHashEasy(weights, topK)
 
 	case configuration.DensifiedMinhashFunction:
-		hashes = l.minHasher.GetHashEasy(l.binIds, weights, topK)
+		hashes = l.minHasher.GetHashEasyDense(l.binIds, weights, topK)
 
 	case configuration.SparseRandomProjectionHashFunction:
 		hashes = l.srp.GetHash(weights)
@@ -646,10 +637,13 @@ func (l *Layer) addToHashTable(
 	l.nodes[id] = l.nodes[id].SetIndices(cowId, hashIndices, bucketIndices)
 }
 
-func (l *Layer) innerproduct(index1 []int, value1, value2 []float64) float64 {
+func (l *Layer) innerproduct(
+	activeNodesPerLayer []index_value.Pair,
+	weights []float64,
+) float64 {
 	total := 0.0
-	for i, v1 := range value1 {
-		total += v1 * value2[index1[i]]
+	for _, pair := range activeNodesPerLayer {
+		total += pair.Value * weights[pair.Index]
 	}
 	return total
 }

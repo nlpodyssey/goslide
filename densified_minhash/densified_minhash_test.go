@@ -4,7 +4,11 @@
 
 package densified_minhash
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/nlpodyssey/goslide/index_value"
+)
 
 func TestDensifiedMinhashNew(t *testing.T) {
 	h := New(3, 10)
@@ -31,6 +35,20 @@ func TestWtaHashGetHashEasy(t *testing.T) {
 	// Just ensure no error is raised
 	h := New(3, 10)
 	result := h.GetHashEasy(
+		[]int{0, 1, 2, 0, 1, 2, 0, 1, 2, 0},
+		[]index_value.Pair{
+			{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5},
+			{5, 6}, {6, 7}, {7, 8}, {8, 9}, {9, 10},
+		},
+		8,
+	)
+	assertIntEqual(t, len(result), 3, "len(result)")
+}
+
+func TestWtaHashGetHashEasyDense(t *testing.T) {
+	// Just ensure no error is raised
+	h := New(3, 10)
+	result := h.GetHashEasyDense(
 		[]int{0, 1, 2, 0, 1, 2, 0, 1, 2, 0},
 		[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 		8,

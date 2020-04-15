@@ -14,18 +14,19 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/nlpodyssey/goslide/index_value"
 )
 
 type Scanner struct {
-	bufScanner     *bufio.Scanner
-	err            error
-	lineNumber     int
-	totalPoints    int
-	numFeatures    int
-	numLabels      int
-	labels         []int
-	featureIndices []int
-	featureValues  []float64
+	bufScanner  *bufio.Scanner
+	err         error
+	lineNumber  int
+	totalPoints int
+	numFeatures int
+	numLabels   int
+	labels      []int
+	features    []index_value.Pair
 }
 
 // Errors returned by Scanner.
@@ -81,12 +82,8 @@ func (s *Scanner) Labels() []int {
 	return s.labels
 }
 
-func (s *Scanner) FeatureIndices() []int {
-	return s.featureIndices
-}
-
-func (s *Scanner) FeatureValues() []float64 {
-	return s.featureValues
+func (s *Scanner) Features() []index_value.Pair {
+	return s.features
 }
 
 func (s *Scanner) Scan() bool {
@@ -147,8 +144,7 @@ func (s *Scanner) parseFeatures(pairs []string) bool {
 		return false
 	}
 
-	s.featureIndices = make([]int, lenPairs)
-	s.featureValues = make([]float64, lenPairs)
+	s.features = make([]index_value.Pair, lenPairs)
 
 	for i, pair := range pairs {
 		splitPair := strings.Split(pair, ":")
@@ -173,8 +169,10 @@ func (s *Scanner) parseFeatures(pairs []string) bool {
 			return false
 		}
 
-		s.featureIndices[i] = featureIndex
-		s.featureValues[i] = featureValue
+		s.features[i] = index_value.Pair{
+			Index: featureIndex,
+			Value: featureValue,
+		}
 	}
 
 	return true

@@ -14,6 +14,8 @@ import (
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/nlpodyssey/goslide/index_value"
 )
 
 // The number of times the range is larger than
@@ -57,7 +59,34 @@ func New(numHashes, numOfBitsToHash int) *WtaHash {
 	}
 }
 
-func (wh *WtaHash) GetHash(data []float64) []int {
+func (wh *WtaHash) GetHash(data []index_value.Pair) []int {
+	hashes := make([]int, wh.numHashes)
+	values := make([]float64, wh.numHashes)
+
+	for i := 0; i < wh.numHashes; i++ {
+		hashes[i] = math.MinInt64
+		values[i] = math.MinInt64
+	}
+
+	for i := 0; i < wh.numHashes; i++ {
+		iOffset := i * binSize
+
+		for j := 0; j < binSize; j++ {
+			jOffset := iOffset + j
+
+			curIndex := wh.indices[jOffset]
+			if value := data[curIndex].Value; values[i] < value {
+				hashes[i] = curIndex
+				values[i] = value
+			}
+		}
+	}
+
+	return hashes
+}
+
+// TODO: avoid code duplication
+func (wh *WtaHash) GetHashDense(data []float64) []int {
 	hashes := make([]int, wh.numHashes)
 	values := make([]float64, wh.numHashes)
 
