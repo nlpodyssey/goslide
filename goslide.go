@@ -33,12 +33,6 @@ func main() {
 	numBatches := config.TotRecords / config.BatchSize
 	numBatchesTest := config.TotRecordsTest / config.BatchSize
 
-	layersTypes := make([]node.NodeType, config.NumLayer)
-	for i := 0; i < config.NumLayer-1; i++ {
-		layersTypes[i] = node.ReLU
-	}
-	layersTypes[config.NumLayer-1] = node.Softmax
-
 	if config.LoadWeight {
 		/*
 			TODO: load weight...
@@ -51,7 +45,7 @@ func main() {
 	myNet := network.New(
 		cowId,
 		config.SizesOfLayers,
-		layersTypes,
+		makeLayersTypes(config.NumLayer),
 		config.NumLayer,
 		config.BatchSize,
 		config.LearningRate,
@@ -69,19 +63,27 @@ func main() {
 	for e := 0; e < config.Epoch; e++ {
 		logger.Println("Epoch", e)
 
-		// train
-		readDataSvm(cowId, numBatches, myNet, e)
+		trainSvmEpoch(cowId, numBatches, myNet, e)
 
 		// test
 		if e == config.Epoch-1 {
-			evalDataSvm(cowId, numBatchesTest, myNet, (e+1)*numBatches)
+			evaluateSvm(cowId, numBatchesTest, myNet, (e+1)*numBatches)
 		} else {
-			evalDataSvm(cowId, 50, myNet, (e+1)*numBatches)
+			evaluateSvm(cowId, 50, myNet, (e+1)*numBatches)
 		}
 	}
 }
 
-func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
+func makeLayersTypes(numLayers int) []node.NodeType {
+	layersTypes := make([]node.NodeType, numLayers)
+	for i := 0; i < numLayers-1; i++ {
+		layersTypes[i] = node.ReLU
+	}
+	layersTypes[numLayers-1] = node.Softmax
+	return layersTypes
+}
+
+func trainSvmEpoch(cowId, numBatches int, myNet *network.Network, epoch int) {
 	config := configuration.Global
 
 	file, err := os.Open(config.TrainData)
@@ -97,7 +99,7 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 
 	for i := 0; i < numBatches; i++ {
 		if i > 0 && (i+epoch*numBatches)%config.Stepsize == 0 {
-			evalDataSvm(cowId, 20, myNet, epoch*numBatches+i)
+			evaluateSvm(cowId, 20, myNet, epoch*numBatches+i)
 		}
 		features := make([][]index_value.Pair, config.BatchSize)
 		labels := make([][]int, config.BatchSize)
@@ -135,7 +137,7 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 	}
 }
 
-func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
+func evaluateSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 	config := configuration.Global
 
 	totCorrect := 0
