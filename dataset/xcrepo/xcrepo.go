@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nlpodyssey/goslide/dataset"
 	"github.com/nlpodyssey/goslide/index_value"
 )
 
@@ -25,8 +26,7 @@ type Scanner struct {
 	totalPoints int
 	numFeatures int
 	numLabels   int
-	labels      []int
-	features    []index_value.Pair
+	example     dataset.Example
 }
 
 // Errors returned by Scanner.
@@ -78,15 +78,14 @@ func (s *Scanner) NumLabels() int {
 	return s.numLabels
 }
 
-func (s *Scanner) Labels() []int {
-	return s.labels
-}
-
-func (s *Scanner) Features() []index_value.Pair {
-	return s.features
+func (s *Scanner) Example() dataset.Example {
+	return s.example
 }
 
 func (s *Scanner) Scan() bool {
+	s.example.Features = nil
+	s.example.Labels = nil
+
 	if s.Err() != nil {
 		return false
 	}
@@ -115,12 +114,12 @@ func (s *Scanner) Scan() bool {
 
 func (s *Scanner) parseLabels(str string) bool {
 	if len(str) == 0 {
-		s.labels = make([]int, 0)
+		s.example.Labels = make([]int, 0)
 		return true
 	}
 
 	labels := strings.Split(str, ",")
-	s.labels = make([]int, len(labels))
+	s.example.Labels = make([]int, len(labels))
 
 	for i, value := range labels {
 		label, err := strconv.Atoi(value)
@@ -132,7 +131,7 @@ func (s *Scanner) parseLabels(str string) bool {
 			s.err = ErrLabelOutOfBounds
 			return false
 		}
-		s.labels[i] = label
+		s.example.Labels[i] = label
 	}
 	return true
 }
@@ -144,7 +143,7 @@ func (s *Scanner) parseFeatures(pairs []string) bool {
 		return false
 	}
 
-	s.features = make([]index_value.Pair, lenPairs)
+	s.example.Features = make([]index_value.Pair, lenPairs)
 
 	for i, pair := range pairs {
 		splitPair := strings.Split(pair, ":")
@@ -169,7 +168,7 @@ func (s *Scanner) parseFeatures(pairs []string) bool {
 			return false
 		}
 
-		s.features[i] = index_value.Pair{
+		s.example.Features[i] = index_value.Pair{
 			Index: featureIndex,
 			Value: featureValue,
 		}

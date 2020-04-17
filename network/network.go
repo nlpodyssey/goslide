@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nlpodyssey/goslide/configuration"
+	"github.com/nlpodyssey/goslide/dataset"
 	"github.com/nlpodyssey/goslide/index_value"
 	"github.com/nlpodyssey/goslide/layer"
 	"github.com/nlpodyssey/goslide/node"
@@ -148,8 +149,7 @@ func (n *Network) GetLayer(layerId int) *layer.Layer {
 
 func (ne *Network) PredictClass(
 	cowId int,
-	features [][]index_value.Pair,
-	labels [][]int,
+	examples []dataset.Example,
 ) (int, *Network) {
 	n := ne.cloneIfNeeded(cowId)
 
@@ -157,9 +157,9 @@ func (ne *Network) PredictClass(
 	correctPred := 0
 
 	// TODO: parallel!
-	for i := 0; i < n.currentBatchSize; i++ {
+	for i, example := range examples {
 		activeNodesPerLayer := make([][]index_value.Pair, n.numberOfLayers+1)
-		activeNodesPerLayer[0] = features[i]
+		activeNodesPerLayer[0] = example.Features
 
 		//inference
 		for j := 0; j < n.numberOfLayers; j++ {
@@ -187,7 +187,7 @@ func (ne *Network) PredictClass(
 			}
 		}
 
-		if intSliceContains(labels[i], predictClass) {
+		if intSliceContains(example.Labels, predictClass) {
 			correctPred++
 		}
 	}
@@ -200,8 +200,7 @@ func (ne *Network) PredictClass(
 
 func (ne *Network) ProcessInput(
 	cowId int,
-	features [][]index_value.Pair,
-	labels [][]int,
+	examples []dataset.Example,
 	iter int,
 	rehash bool,
 	rebuild bool,
@@ -232,10 +231,10 @@ func (ne *Network) ProcessInput(
 	activeNodesPerBatch := make([][][]index_value.Pair, n.currentBatchSize)
 
 	// TODO: parallel!
-	for i := 0; i < n.currentBatchSize; i++ {
+	for i, example := range examples {
 		activeNodesPerLayer := make([][]index_value.Pair, n.numberOfLayers+1)
 		activeNodesPerBatch[i] = activeNodesPerLayer
-		activeNodesPerLayer[0] = features[i]
+		activeNodesPerLayer[0] = example.Features
 
 		for j := 0; j < n.numberOfLayers; j++ {
 			var in int
@@ -244,7 +243,7 @@ func (ne *Network) ProcessInput(
 				activeNodesPerLayer,
 				j,
 				i,
-				labels[i],
+				example.Labels,
 				n.sparsity[j],
 				iter*n.currentBatchSize+i,
 			)
@@ -265,7 +264,7 @@ func (ne *Network) ProcessInput(
 						cowId,
 						layer.GetNomalizationConstant(i),
 						i,
-						labels[i],
+						example.Labels,
 					)
 				}
 				if j != 0 {
@@ -283,7 +282,7 @@ func (ne *Network) ProcessInput(
 					// FIXME: we should reassign the cow-ed node into the layer
 					node.BackPropagateFirstLayer(
 						cowId,
-						features[i],
+						example.Features,
 						tmpLr,
 						i,
 					)

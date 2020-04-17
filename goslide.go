@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/nlpodyssey/goslide/configuration"
+	"github.com/nlpodyssey/goslide/dataset"
 	"github.com/nlpodyssey/goslide/dataset/xcrepo"
-	"github.com/nlpodyssey/goslide/index_value"
 	"github.com/nlpodyssey/goslide/network"
 	"github.com/nlpodyssey/goslide/node"
 )
@@ -97,16 +97,16 @@ func trainSvmEpoch(cowId, numBatches int, myNet *network.Network, epoch int) {
 		logger.Fatal(err)
 	}
 
+	examples := make([]dataset.Example, 0, config.BatchSize)
+
 	for i := 0; i < numBatches; i++ {
 		if i > 0 && (i+epoch*numBatches)%config.Stepsize == 0 {
 			evaluateSvm(cowId, 20, myNet, epoch*numBatches+i)
 		}
-		features := make([][]index_value.Pair, config.BatchSize)
-		labels := make([][]int, config.BatchSize)
 
+		examples = examples[:0]
 		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
-			features[count] = scanner.Features()
-			labels[count] = scanner.Labels()
+			examples = append(examples, scanner.Example())
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -130,7 +130,7 @@ func trainSvmEpoch(cowId, numBatches int, myNet *network.Network, epoch int) {
 
 		// logloss
 		_, myNet = myNet.ProcessInput(
-			cowId, features, labels, epoch*numBatches+i, rehash, rebuild)
+			cowId, examples, epoch*numBatches+i, rehash, rebuild)
 
 		endTime := time.Now()
 		globalTime += endTime.Sub(startTime)
@@ -153,18 +153,16 @@ func evaluateSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 		logger.Fatal(err)
 	}
 
+	examples := make([]dataset.Example, 0, config.BatchSize)
+
 	for i := 0; i < numBatchesTest; i++ {
-		features := make([][]index_value.Pair, config.BatchSize)
-		labels := make([][]int, config.BatchSize)
 		numFeatures := 0
 		numLabels := 0
-
+		examples = examples[:0]
 		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
-			features[count] = scanner.Features()
-			labels[count] = scanner.Labels()
-
-			numFeatures += len(features[count])
-			numLabels += len(labels[count])
+			examples = append(examples, scanner.Example())
+			numFeatures += len(examples[count].Features)
+			numLabels += len(examples[count].Labels)
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -177,8 +175,7 @@ func evaluateSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 		var correctPredict int
 
 		// FIXME: reassignment of myNet for CoW problematic
-		correctPredict, myNet =
-			myNet.PredictClass(cowId, features, labels)
+		correctPredict, myNet = myNet.PredictClass(cowId, examples)
 
 		totCorrect += correctPredict
 
