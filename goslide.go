@@ -5,7 +5,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -63,12 +62,12 @@ func main() {
 		config.Sparsity,
 	)
 	endTime := time.Now()
-	fmt.Printf("Network Initialization takes %v.\n", endTime.Sub(startTime))
+	logger.Println("Network Initialization takes", endTime.Sub(startTime))
 
 	// Start Training
 
 	for e := 0; e < config.Epoch; e++ {
-		fmt.Printf("Epoch %d\n", e)
+		logger.Println("Epoch", e)
 
 		// train
 		readDataSvm(cowId, numBatches, myNet, e)
@@ -87,13 +86,13 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 
 	file, err := os.Open(config.TrainData)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	defer file.Close()
 
 	scanner := xcrepo.NewScanner(file)
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	for i := 0; i < numBatches; i++ {
@@ -109,7 +108,7 @@ func readDataSvm(cowId, numBatches int, myNet *network.Network, epoch int) {
 		}
 
 		if err := scanner.Err(); err != nil {
-			log.Printf("Error at line %d. %v", scanner.LineNumber(), err)
+			logger.Fatalf("Error at line %d. %v", scanner.LineNumber(), err)
 		}
 
 		rehash := false
@@ -143,13 +142,13 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 
 	file, err := os.Open(config.TestData)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	defer file.Close()
 
 	scanner := xcrepo.NewScanner(file)
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	for i := 0; i < numBatchesTest; i++ {
@@ -167,11 +166,11 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 		}
 
 		if err := scanner.Err(); err != nil {
-			log.Printf("Error at line %d. %v", scanner.LineNumber(), err)
+			logger.Fatalf("Error at line %d. %v", scanner.LineNumber(), err)
 		}
 
-		fmt.Printf("%d records, with %d features and %d labels\n",
-			config.BatchSize, numFeatures, numLabels)
+		logger.Println(config.BatchSize, "records, with", numFeatures,
+			"features and", numLabels, "labels")
 
 		var correctPredict int
 
@@ -181,15 +180,17 @@ func evalDataSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 
 		totCorrect += correctPredict
 
-		fmt.Printf("Iter %d: %f correct\n",
-			i, float64(totCorrect)/(float64(config.BatchSize)*(float64(i)+1)))
+		logger.Println("Iter", i, "-",
+			float64(totCorrect)/(float64(config.BatchSize)*(float64(i)+1)),
+			"correct")
 	}
 
-	fmt.Printf("Over all: %f correct\n",
-		float64(totCorrect)/(float64(numBatchesTest)*float64(config.BatchSize)))
+	logger.Println("Over all:",
+		float64(totCorrect)/(float64(numBatchesTest)*float64(config.BatchSize)),
+		"correct")
 
-	fmt.Printf("%d %v %f\n",
-		iter, globalTime, float64(totCorrect)/(float64(numBatchesTest)*float64(config.BatchSize)))
+	logger.Println(iter, globalTime,
+		float64(totCorrect)/(float64(numBatchesTest)*float64(config.BatchSize)))
 }
 
 func validateArguments() {
