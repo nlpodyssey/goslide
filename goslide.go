@@ -55,7 +55,7 @@ func main() {
 		layersTypes,
 		config.NumLayer,
 		config.BatchSize,
-		config.Lr,
+		config.LearningRate,
 		config.InputDim,
 		config.K,
 		config.L,

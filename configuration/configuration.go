@@ -22,7 +22,7 @@ type Configuration struct {
 	InputDim       int
 	TotRecords     int
 	TotRecordsTest int
-	Lr             float64
+	LearningRate   float64
 	Epoch          int
 	Stepsize       int
 	SizesOfLayers  []int
@@ -68,7 +68,7 @@ func Default() *Configuration {
 		InputDim:       784,
 		TotRecords:     60000,
 		TotRecordsTest: 10000,
-		Lr:             0.0001,
+		LearningRate:   0.0001,
 		Epoch:          5,
 		Stepsize:       20,
 		SizesOfLayers:  make([]int, 0),
