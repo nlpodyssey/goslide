@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/nlpodyssey/goslide/configuration"
-	"github.com/nlpodyssey/goslide/corpusio/xcrepo"
+	"github.com/nlpodyssey/goslide/dataset/xcrepo"
 	"github.com/nlpodyssey/goslide/index_value"
 	"github.com/nlpodyssey/goslide/network"
 	"github.com/nlpodyssey/goslide/node"
