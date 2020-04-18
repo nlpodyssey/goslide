@@ -609,9 +609,7 @@ func (l *Layer) addToHashTable(
 	}
 
 	hashIndices := l.hashTables.HashesToIndex(hashes)
-	bucketIndices := l.hashTables.Add(hashIndices, id+1)
-
-	l.nodes[id] = l.nodes[id].SetIndices(cowId, hashIndices, bucketIndices)
+	l.hashTables.Add(hashIndices, id+1)
 }
 
 func (l *Layer) innerproduct(

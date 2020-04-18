@@ -17,20 +17,14 @@ type Node struct {
 
 type baseNode struct {
 	cowId            int // "thread" ID for copy on write
-	activeInputs     int
 	nodeType         NodeType
 	currentBatchsize int
-	dim              int
-	layerNum         int
 	idInLayer        int
-	indicesInTables  []int
-	indicesInBuckets []int
 	weights          []float64
 	mirrorWeights    []float64
 	adamAvgMom       []float64
 	adamAvgVel       []float64
 	t                []float64 // for adam
-	update           []int
 	bias             float64
 	tBias            float64
 	adamAvgMomBias   float64
@@ -62,7 +56,7 @@ func NewEmptyNode(cowId int) *Node {
 
 func NewNode(
 	cowId int,
-	dim int,
+	adamTDim int,
 	nodeId int,
 	layerId int,
 	nodeType NodeType,
@@ -76,12 +70,9 @@ func NewNode(
 		cowId: cowId,
 		base: &baseNode{
 			cowId:            cowId,
-			dim:              dim,
 			idInLayer:        nodeId,
 			nodeType:         nodeType,
-			layerNum:         layerId,
 			currentBatchsize: batchsize,
-			activeInputs:     0,
 			weights:          weights,
 			bias:             bias,
 			mirrorBias:       bias,
@@ -93,7 +84,7 @@ func NewNode(
 	if configuration.Global.UseAdam {
 		newNode.base.adamAvgMom = adamAvgMom
 		newNode.base.adamAvgVel = adamAvgVel
-		newNode.base.t = make([]float64, dim)
+		newNode.base.t = make([]float64, adamTDim)
 	}
 
 	for i := range newNode.train {
@@ -111,8 +102,8 @@ func (n *Node) Bias() float64 {
 	return n.base.bias
 }
 
-func (n *Node) Dim() int {
-	return n.base.dim
+func (n *Node) AdamTDim() int {
+	return len(n.base.t)
 }
 
 func (n *Node) GetT(i int) float64 {
@@ -200,23 +191,9 @@ func (nd *Node) CopyWeightsAndBiasFromMirror(cowId int) *Node {
 	return n
 }
 
-func (nd *Node) SetIndices(
-	cowId int,
-	indicesInTables []int,
-	indicesInBuckets []int,
-) *Node {
-	n := nd.cloneIfNeeded(cowId)
-	n.base = n.base.cloneIfNeeded(cowId)
-
-	n.base.indicesInTables = indicesInTables
-	n.base.indicesInBuckets = indicesInBuckets
-
-	return n
-}
-
 func (nd *Node) Update(
 	cowId int,
-	dim int,
+	adamTDim int,
 	nodeId int,
 	layerId int,
 	nodeType NodeType,
@@ -230,12 +207,9 @@ func (nd *Node) Update(
 	n := nd.cloneIfNeeded(cowId)
 	n.base = n.base.cloneIfNeeded(cowId)
 
-	n.base.dim = dim
 	n.base.idInLayer = nodeId
 	n.base.nodeType = nodeType
-	n.base.layerNum = layerId
 	n.base.currentBatchsize = batchsize
-	n.base.activeInputs = 0
 	n.base.weights = weights
 	n.base.bias = bias
 	n.base.mirrorBias = bias
@@ -244,7 +218,7 @@ func (nd *Node) Update(
 	if configuration.Global.UseAdam {
 		n.base.adamAvgMom = adamAvgMom
 		n.base.adamAvgVel = adamAvgVel
-		n.base.t = make([]float64, dim)
+		n.base.t = make([]float64, adamTDim)
 	}
 
 	n.train = trainBlob
@@ -258,14 +232,6 @@ func (n *Node) GetLastActivation(inputId int) float64 {
 		return 0
 	}
 	return t.lastActivations
-}
-
-func (n *Node) GetInputActive(inputId int) bool {
-	return n.train[inputId].activeinputIds == 1
-}
-
-func (n *Node) GetActiveInputs() bool {
-	return n.base.activeInputs > 0
 }
 
 func (nd *Node) IncrementDelta(
@@ -302,7 +268,6 @@ func (nd *Node) GetActivation(
 		n.train[inputId].activeinputIds = 1 // activate input
 
 		n.base = n.base.cloneIfNeeded(cowId)
-		n.base.activeInputs++
 	}
 
 	n.train[inputId].lastActivations = 0
@@ -406,7 +371,6 @@ func (nd *Node) BackPropagate(
 	n.train[inputId].activeinputIds = 0
 	n.train[inputId].lastDeltaforBPs = 0
 	n.train[inputId].lastActivations = 0
-	n.base.activeInputs--
 
 	return n
 }
@@ -446,7 +410,6 @@ func (nd *Node) BackPropagateFirstLayer(
 	n.train[inputId].activeinputIds = 0 // deactivate inputIDs
 	n.train[inputId].lastDeltaforBPs = 0
 	n.train[inputId].lastActivations = 0
-	n.base.activeInputs--
 
 	return n
 }
@@ -519,20 +482,14 @@ func (n *baseNode) clone(cowId int) *baseNode {
 	// TODO: not sure we should clone all slices...
 	return &baseNode{
 		cowId:            cowId,
-		activeInputs:     n.activeInputs,
 		nodeType:         n.nodeType,
 		currentBatchsize: n.currentBatchsize,
-		dim:              n.dim,
-		layerNum:         n.layerNum,
 		idInLayer:        n.idInLayer,
-		indicesInTables:  copyIntSlice(n.indicesInTables),
-		indicesInBuckets: copyIntSlice(n.indicesInBuckets),
 		weights:          copyFloat64Slice(n.weights),
 		mirrorWeights:    copyFloat64Slice(n.mirrorWeights),
 		adamAvgMom:       copyFloat64Slice(n.adamAvgMom),
 		adamAvgVel:       copyFloat64Slice(n.adamAvgVel),
 		t:                copyFloat64Slice(n.t),
-		update:           copyIntSlice(n.update),
 		bias:             n.bias,
 		tBias:            n.tBias,
 		adamAvgMomBias:   n.adamAvgMomBias,

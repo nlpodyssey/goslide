@@ -254,10 +254,10 @@ func (ne *Network) ProcessInput(
 		// TODO: parallel!
 		for m := 0; m < layer.NumOfNodes(); m++ {
 			tmp := layer.GetNodeById(m)
-			dim := tmp.Dim()
 			curWeights := tmp.Weights()
 
 			if configuration.Global.UseAdam {
+				dim := tmp.AdamTDim()
 				for d := 0; d < dim; d++ {
 					t := tmp.GetT(d)
 					mom := tmp.GetAdamAvgMom(d)
