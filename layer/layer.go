@@ -74,11 +74,6 @@ func New(
 	adamAvgMom []float64,
 	adamAvgVel []float64,
 ) *Layer {
-	nodes := make([]*node.Node, numOfNodes)
-	for i := range nodes {
-		nodes[i] = node.NewEmptyNode(cowId)
-	}
-
 	// Create a list of random nodes just in case not enough nodes
 	// from hashtable for active nodes.
 	randNode := make([]int, numOfNodes)
@@ -93,7 +88,7 @@ func New(
 	newLayer := &Layer{
 		cowId:                   cowId,
 		nodeType:                nodeType,
-		nodes:                   nodes,
+		nodes:                   nil,
 		randNode:                randNode,
 		normalizationConstants:  nil,
 		k:                       k,
@@ -174,8 +169,13 @@ func New(
 
 	// create nodes for this layer
 
+	nodes := make([]*node.Node, numOfNodes)
+	for i := range nodes {
+		nodes[i] = node.NewEmptyNode(cowId)
+	}
+
 	// TODO: parallel!
-	for i := range newLayer.nodes {
+	for i := range nodes {
 		var layerAdamAvgMom []float64 = nil
 		var layerAdamAvgVel []float64 = nil
 
@@ -187,7 +187,7 @@ func New(
 			layerAdamAvgVel = curAdamAvgVel[firstIndex:lastIndex]
 		}
 
-		newLayer.nodes[i] = newLayer.nodes[i].Update(
+		nodes[i] = nodes[i].Update(
 			cowId,
 			previousLayerNumOfNodes,
 			i,
@@ -202,11 +202,13 @@ func New(
 		)
 		newLayer.addToHashTable(
 			cowId,
-			newLayer.nodes[i].Weights(),
+			nodes[i].Weights(),
 			// TODO: custom length? -> previousLayerNumOfNodes,
-			newLayer.nodes[i].Bias(),
+			nodes[i].Bias(),
 			i)
 	}
+
+	newLayer.nodes = nodes
 
 	endTime := time.Now()
 	elapsedTime := endTime.Sub(startTime)
@@ -291,10 +293,11 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 	if sparsity == 1.0 {
 		length = len(l.nodes)
 		// assuming not intitialized
-		activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
-		for i := range activeNodesPerLayer[layerIndex+1] {
-			activeNodesPerLayer[layerIndex+1][i].Index = i
+		newActiveNodes := make([]index_value.Pair, length)
+		for i := range newActiveNodes {
+			newActiveNodes[i].Index = i
 		}
+		activeNodesPerLayer[layerIndex+1] = newActiveNodes
 	} else {
 		switch configuration.Global.LayerMode {
 		case configuration.LayerMode1:
@@ -478,8 +481,9 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 					if len(counts) >= 1000 { // TODO: avoid magic number
 						break
 					}
-					if _, ok := counts[l.randNode[i]]; !ok {
-						counts[l.randNode[i]] = 0
+					cIndex := l.randNode[i]
+					if _, ok := counts[cIndex]; !ok {
+						counts[cIndex] = 0
 					}
 				}
 
@@ -496,14 +500,15 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			}
 
 			length = len(counts)
-			activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
+			newActiveNodes := make([]index_value.Pair, length)
 
 			// copy map into new array
 			i := 0
 			for index := range counts {
-				activeNodesPerLayer[layerIndex+1][i].Index = index
+				newActiveNodes[i].Index = index
 				i++
 			}
+			activeNodesPerLayer[layerIndex+1] = newActiveNodes
 		}
 	}
 
@@ -516,11 +521,13 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 		l.normalizationConstants[inputId] = 0
 	}
 
+	nodes := l.nodes
+
 	// find activation for all ACTIVE nodes in layer
 	for i, pair := range nextLayerActiveNodes {
 		var value float64
-		value, l.nodes[pair.Index] =
-			l.nodes[pair.Index].GetActivation(
+		value, nodes[pair.Index] =
+			nodes[pair.Index].GetActivation(
 				cowId, currentLayerActiveNodes, inputId,
 			)
 		nextLayerActiveNodes[i].Value = value
@@ -530,13 +537,12 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 	}
 
 	if l.nodeType == node.Softmax {
-		for i := 0; i < length; i++ {
-			realActivation := math.Exp(nextLayerActiveNodes[i].Value - maxValue)
+		for i, pair := range nextLayerActiveNodes {
+			realActivation := math.Exp(pair.Value - maxValue)
 			nextLayerActiveNodes[i].Value = realActivation
-			l.nodes[nextLayerActiveNodes[i].Index] =
-				l.nodes[nextLayerActiveNodes[i].Index].SetlastActivation(
-					cowId, inputId, realActivation,
-				)
+			nodes[pair.Index] = nodes[pair.Index].SetlastActivation(
+				cowId, inputId, realActivation,
+			)
 			l.normalizationConstants[inputId] += realActivation
 		}
 	}
