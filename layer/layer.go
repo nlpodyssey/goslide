@@ -36,17 +36,7 @@ type Layer struct {
 	normalizationConstants  []float64
 	k                       int
 	l                       int
-	rangeRow                int
 	previousLayerNumOfNodes int
-	batchSize               int
-	trainArray              []*node.NodeTrain
-	layerId                 int
-	numOfActive             int
-	numOfNodes              int
-	weights                 []float64
-	adamAvgMom              []float64
-	adamAvgVel              []float64
-	bias                    []float64
 	hashTables              *lsh.LSH
 	wtaHasher               *wta_hash.WtaHash
 	minHasher               *densified_minhash.DensifiedMinhash
@@ -113,17 +103,7 @@ func New(
 		normalizationConstants:  nil,
 		k:                       k,
 		l:                       l,
-		rangeRow:                rangePow,
 		previousLayerNumOfNodes: previousLayerNumOfNodes,
-		batchSize:               batchSize,
-		trainArray:              nil,
-		layerId:                 layerId,
-		numOfActive:             int(math.Floor(float64(numOfNodes) * sparsity)),
-		numOfNodes:              numOfNodes,
-		weights:                 nil,
-		adamAvgMom:              nil,
-		adamAvgVel:              nil,
-		bias:                    nil,
 		// TODO: Initialize Hash Tables and add the nodes.
 		hashTables: lsh.New(k, l, rangePow),
 		wtaHasher:  nil,
@@ -155,39 +135,46 @@ func New(
 			configuration.Global.HashFunction))
 	}
 
+	var (
+		curWeights    []float64
+		curBias       []float64
+		curAdamAvgMom []float64
+		curAdamAvgVel []float64
+	)
+
 	if configuration.Global.LoadWeight {
-		newLayer.weights = weights
-		newLayer.bias = bias
+		curWeights = weights
+		curBias = bias
 		if configuration.Global.UseAdam {
-			newLayer.adamAvgMom = adamAvgMom
-			newLayer.adamAvgVel = adamAvgVel
+			curAdamAvgMom = adamAvgMom
+			curAdamAvgVel = adamAvgVel
 		}
 	} else {
 		// TODO: check if normal dist is comparable to C++ implementation
-		newLayer.weights = make([]float64, numOfNodes*previousLayerNumOfNodes)
-		for i := range newLayer.weights {
-			newLayer.weights[i] = rand.NormFloat64()*normalDistributionStdDev +
+		curWeights = make([]float64, numOfNodes*previousLayerNumOfNodes)
+		for i := range curWeights {
+			curWeights[i] = rand.NormFloat64()*normalDistributionStdDev +
 				normalDistributionMean
 		}
 
-		newLayer.bias = make([]float64, numOfNodes)
-		for i := range newLayer.bias {
-			newLayer.bias[i] = rand.NormFloat64()*normalDistributionStdDev +
+		curBias = make([]float64, numOfNodes)
+		for i := range curBias {
+			curBias[i] = rand.NormFloat64()*normalDistributionStdDev +
 				normalDistributionMean
 		}
 
 		if configuration.Global.UseAdam {
 			size := numOfNodes * previousLayerNumOfNodes
-			newLayer.adamAvgMom = make([]float64, size)
-			newLayer.adamAvgVel = make([]float64, size)
+			curAdamAvgMom = make([]float64, size)
+			curAdamAvgVel = make([]float64, size)
 		}
 	}
 
 	startTime := time.Now()
 
-	newLayer.trainArray = make([]*node.NodeTrain, numOfNodes*batchSize)
-	for i := range newLayer.trainArray {
-		newLayer.trainArray[i] = node.NewNodeTrain(cowId)
+	trainArray := make([]*node.NodeTrain, numOfNodes*batchSize)
+	for i := range trainArray {
+		trainArray[i] = node.NewNodeTrain(cowId)
 	}
 
 	// create nodes for this layer
@@ -201,8 +188,8 @@ func New(
 		lastIndex := firstIndex + previousLayerNumOfNodes
 
 		if configuration.Global.UseAdam {
-			layerAdamAvgMom = newLayer.adamAvgMom[firstIndex:lastIndex]
-			layerAdamAvgVel = newLayer.adamAvgVel[firstIndex:lastIndex]
+			layerAdamAvgMom = curAdamAvgMom[firstIndex:lastIndex]
+			layerAdamAvgVel = curAdamAvgVel[firstIndex:lastIndex]
 		}
 
 		newLayer.nodes[i] = newLayer.nodes[i].Update(
@@ -212,11 +199,11 @@ func New(
 			layerId,
 			nodeType,
 			batchSize,
-			newLayer.weights[firstIndex:lastIndex],
-			newLayer.bias[i],
+			curWeights[firstIndex:lastIndex],
+			curBias[i],
 			layerAdamAvgMom,
 			layerAdamAvgVel,
-			newLayer.trainArray[batchSize*i:batchSize*i+batchSize],
+			trainArray[batchSize*i:batchSize*i+batchSize],
 		)
 		newLayer.addToHashTable(
 			cowId,
@@ -270,7 +257,7 @@ func (l *Layer) UpdateRandomNodes() {
 	swapRandNode := func(i, j int) {
 		l.randNode[i], l.randNode[j] = l.randNode[j], l.randNode[i]
 	}
-	rand.Shuffle(l.numOfNodes, swapRandNode)
+	rand.Shuffle(len(l.nodes), swapRandNode)
 }
 
 func (l *Layer) GetNodeById(nodeId int) *node.Node {
@@ -282,7 +269,7 @@ func (l *Layer) GetAllNodes() []*node.Node {
 }
 
 func (l *Layer) GetNodeCount() int {
-	return l.numOfNodes
+	return len(l.nodes)
 }
 
 func (l *Layer) GetNomalizationConstant(inputId int) float64 {
@@ -311,7 +298,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 	in := 0
 
 	if sparsity == 1.0 {
-		length = l.numOfNodes
+		length = len(l.nodes)
 		// assuming not intitialized
 		activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
 		for i := range activeNodesPerLayer[layerIndex+1] {
@@ -381,7 +368,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			in = length
 		case configuration.LayerMode2:
 			if l.nodeType == node.Softmax {
-				length = int(math.Floor(float64(l.numOfNodes) * sparsity))
+				length = int(math.Floor(float64(len(l.nodes)) * sparsity))
 				activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
 
 				bs := make([]bool, mapLen) // bitset
@@ -394,7 +381,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 					tmpSize = len(label)
 				}
 				for tmpSize < length {
-					v := rand.Intn(l.numOfNodes)
+					v := rand.Intn(len(l.nodes))
 					if !bs[v] {
 						activeNodesPerLayer[layerIndex+1][tmpSize].Index = v
 						bs[v] = true
@@ -404,7 +391,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			}
 		case configuration.LayerMode3:
 			if l.nodeType == node.Softmax {
-				length = int(math.Floor(float64(l.numOfNodes) * sparsity))
+				length = int(math.Floor(float64(len(l.nodes)) * sparsity))
 				activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
 
 				sortW := make([]indexValuePair, 0)
@@ -495,8 +482,8 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			if len(counts) < 1500 { // TODO: avoid magic number
 				// TODO: it doesn't look like the best place to seed here
 				rand.Seed(time.Now().UnixNano())
-				start := rand.Intn(l.numOfNodes)
-				for i := start; i < l.numOfNodes; i++ {
+				start := rand.Intn(len(l.nodes))
+				for i := start; i < len(l.nodes); i++ {
 					if len(counts) >= 1000 { // TODO: avoid magic number
 						break
 					}
@@ -571,7 +558,7 @@ func (l *Layer) ClearHashTables() {
 }
 
 func (l *Layer) NumOfNodes() int {
-	return l.numOfNodes
+	return len(l.nodes)
 }
 
 func (l *Layer) GetHashForInputProcessing(weights []float64) []int {
