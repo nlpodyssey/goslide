@@ -299,7 +299,6 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 	inputId int,
 	label []int,
 	sparsity float64,
-	iter int,
 ) (int, *Layer) {
 	l := la.cloneIfNeeded(cowId)
 

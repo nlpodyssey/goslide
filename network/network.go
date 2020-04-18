@@ -129,7 +129,6 @@ func (ne *Network) PredictClass(
 					i,
 					[]int{},
 					n.sparsity[n.numberOfLayers+layerIndex],
-					-1,
 				)
 		}
 
@@ -203,7 +202,6 @@ func (ne *Network) ProcessInput(
 				i,
 				example.Labels,
 				n.sparsity[j],
-				iter*n.currentBatchSize+i,
 			)
 			avgRetrieval[j] += in
 		}
