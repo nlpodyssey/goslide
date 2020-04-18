@@ -77,7 +77,7 @@ func NewNode(
 			mirrorBias:       bias,
 			mirrorWeights:    weights, // TODO: correct? not present in C++
 		},
-		train: make([]*NodeTrain, batchsize),
+		train: nil,
 	}
 
 	if configuration.Global.UseAdam {
@@ -86,9 +86,11 @@ func NewNode(
 		newNode.base.t = make([]float64, adamTDim)
 	}
 
-	for i := range newNode.train {
-		newNode.train[i] = NewNodeTrain(cowId)
+	train := make([]*NodeTrain, batchsize)
+	for i := range train {
+		train[i] = NewNodeTrain(cowId)
 	}
+	newNode.train = train
 
 	return newNode
 }
@@ -244,8 +246,9 @@ func (nd *Node) IncrementDelta(
 	}
 
 	n := nd.cloneIfNeeded(cowId)
-	n.train[inputId] = n.train[inputId].cloneIfNeeded(cowId)
-	n.train[inputId].lastDeltaforBPs += incrementValue
+	train := n.train
+	train[inputId] = train[inputId].cloneIfNeeded(cowId)
+	train[inputId].lastDeltaforBPs += incrementValue
 	return n
 }
 
@@ -261,35 +264,36 @@ func (nd *Node) GetActivation(
 	//FUTURE TODO: shrink batchsize and check if input is already active then ignore and ensure backpopagation is ignored too.
 
 	n := nd.cloneIfNeeded(cowId)
-	n.train[inputId] = n.train[inputId].cloneIfNeeded(cowId)
+	train := n.train
+	train[inputId] = train[inputId].cloneIfNeeded(cowId)
 
-	if n.train[inputId].activeinputIds != 1 {
-		n.train[inputId].activeinputIds = 1 // activate input
+	if train[inputId].activeinputIds != 1 {
+		train[inputId].activeinputIds = 1 // activate input
 
 		n.base = n.base.cloneIfNeeded(cowId)
 	}
 
-	n.train[inputId].lastActivations = 0
+	train[inputId].lastActivations = 0
 
 	for _, pair := range data {
-		n.train[inputId].lastActivations +=
+		train[inputId].lastActivations +=
 			n.base.weights[pair.Index] * pair.Value
 	}
 
-	n.train[inputId].lastActivations += n.base.bias
+	train[inputId].lastActivations += n.base.bias
 
 	switch n.base.nodeType {
 	case ReLU:
-		if n.train[inputId].lastActivations < 0 {
-			n.train[inputId].lastActivations = 0
-			n.train[inputId].lastDeltaforBPs = 0
+		if train[inputId].lastActivations < 0 {
+			train[inputId].lastActivations = 0
+			train[inputId].lastDeltaforBPs = 0
 		}
 	case Softmax: // do nothing
 	default:
 		panic("Invalid Node type from Constructor")
 	}
 
-	return n.train[inputId].lastActivations, n
+	return train[inputId].lastActivations, n
 }
 
 func (nd *Node) ComputeExtaStatsForSoftMax(
@@ -303,17 +307,18 @@ func (nd *Node) ComputeExtaStatsForSoftMax(
 	}
 
 	n := nd.cloneIfNeeded(cowId)
-	n.train[inputId] = n.train[inputId].cloneIfNeeded(cowId)
+	train := n.train
+	train[inputId] = train[inputId].cloneIfNeeded(cowId)
 
-	n.train[inputId].lastActivations /= normalizationConstant + 0.0000001
+	train[inputId].lastActivations /= normalizationConstant + 0.0000001
 
 	//TODO:check gradient
 
 	if intSliceContains(labels, n.base.idInLayer) {
-		n.train[inputId].lastDeltaforBPs = 1.0/float64(len(labels)) -
-			n.train[inputId].lastActivations/float64(n.base.currentBatchsize)
+		train[inputId].lastDeltaforBPs = 1.0/float64(len(labels)) -
+			train[inputId].lastActivations/float64(n.base.currentBatchsize)
 	} else {
-		n.train[inputId].lastDeltaforBPs = -n.train[inputId].lastActivations /
+		train[inputId].lastDeltaforBPs = -train[inputId].lastActivations /
 			float64(n.base.currentBatchsize)
 	}
 
@@ -332,7 +337,8 @@ func (nd *Node) BackPropagate(
 	}
 
 	n := nd.cloneIfNeeded(cowId)
-	n.train[inputId] = n.train[inputId].cloneIfNeeded(cowId)
+	train := n.train
+	train[inputId] = train[inputId].cloneIfNeeded(cowId)
 	n.base = n.base.cloneIfNeeded(cowId)
 
 	for _, pair := range previousLayerActiveNodes {
@@ -342,10 +348,10 @@ func (nd *Node) BackPropagate(
 		prevNode := (*previousNodes)[nodeId].IncrementDelta(
 			cowId,
 			inputId,
-			n.train[inputId].lastDeltaforBPs*n.base.weights[nodeId])
+			train[inputId].lastDeltaforBPs*n.base.weights[nodeId])
 		(*previousNodes)[nodeId] = prevNode
 
-		gradT := n.train[inputId].lastDeltaforBPs *
+		gradT := train[inputId].lastDeltaforBPs *
 			prevNode.GetLastActivation(inputId)
 
 		if configuration.Global.UseAdam {
@@ -356,16 +362,16 @@ func (nd *Node) BackPropagate(
 	}
 
 	if configuration.Global.UseAdam {
-		biasgradT := n.train[inputId].lastDeltaforBPs
+		biasgradT := train[inputId].lastDeltaforBPs
 		// TODO: ?? biasgradTsq := biasgradT * biasgradT
 		n.base.tBias += biasgradT
 	} else {
-		n.base.mirrorBias += learningRate * n.train[inputId].lastDeltaforBPs
+		n.base.mirrorBias += learningRate * train[inputId].lastDeltaforBPs
 	}
 
-	n.train[inputId].activeinputIds = 0
-	n.train[inputId].lastDeltaforBPs = 0
-	n.train[inputId].lastActivations = 0
+	train[inputId].activeinputIds = 0
+	train[inputId].lastDeltaforBPs = 0
+	train[inputId].lastActivations = 0
 
 	return n
 }
@@ -381,11 +387,12 @@ func (nd *Node) BackPropagateFirstLayer(
 	}
 
 	n := nd.cloneIfNeeded(cowId)
-	n.train[inputId] = n.train[inputId].cloneIfNeeded(cowId)
+	train := n.train
+	train[inputId] = train[inputId].cloneIfNeeded(cowId)
 	n.base = n.base.cloneIfNeeded(cowId)
 
 	for _, pair := range indexValuePairs {
-		gradT := n.train[inputId].lastDeltaforBPs * pair.Value
+		gradT := train[inputId].lastDeltaforBPs * pair.Value
 		// TODO: ?? gradTsq := gradT * gradT
 		if configuration.Global.UseAdam {
 			n.base.t[pair.Index] += gradT
@@ -395,16 +402,16 @@ func (nd *Node) BackPropagateFirstLayer(
 	}
 
 	if configuration.Global.UseAdam {
-		biasgradT := n.train[inputId].lastDeltaforBPs
+		biasgradT := train[inputId].lastDeltaforBPs
 		// TODO: ?? biasgradTsq = biasgradT * biasgradT
 		n.base.tBias += biasgradT
 	} else {
-		n.base.mirrorBias += learningRate + n.train[inputId].lastDeltaforBPs
+		n.base.mirrorBias += learningRate + train[inputId].lastDeltaforBPs
 	}
 
-	n.train[inputId].activeinputIds = 0 // deactivate inputIDs
-	n.train[inputId].lastDeltaforBPs = 0
-	n.train[inputId].lastActivations = 0
+	train[inputId].activeinputIds = 0 // deactivate inputIDs
+	train[inputId].lastDeltaforBPs = 0
+	train[inputId].lastActivations = 0
 
 	return n
 }
@@ -415,9 +422,10 @@ func (nd *Node) SetlastActivation(
 	realActivation float64,
 ) *Node {
 	n := nd.cloneIfNeeded(cowId)
-	n.train[inputId] = n.train[inputId].cloneIfNeeded(cowId)
+	train := n.train
+	train[inputId] = train[inputId].cloneIfNeeded(cowId)
 
-	n.train[inputId].lastActivations = realActivation
+	train[inputId].lastActivations = realActivation
 
 	return n
 }
@@ -431,9 +439,10 @@ func (nd *Node) PurturbWeight(
 	n := nd.cloneIfNeeded(cowId)
 	n.base = n.base.cloneIfNeeded(cowId)
 
-	n.base.weights[weightId] += delta
+	weights := n.base.weights
+	weights[weightId] += delta
 
-	return n.base.weights[weightId], n
+	return weights[weightId], n
 }
 
 func (n *Node) GetGradient(
