@@ -44,9 +44,9 @@ func main() {
 	startTime := time.Now()
 	myNet := network.New(
 		cowId,
+		config.NumLayer,
 		config.SizesOfLayers,
 		makeLayersTypes(config.NumLayer),
-		config.NumLayer,
 		config.BatchSize,
 		config.LearningRate,
 		config.InputDim,

@@ -36,11 +36,11 @@ type Network struct {
 
 func New(
 	cowId int,
+	numOfLayers int,
 	sizesOfLayers []int,
 	layerTypes []node.NodeType,
-	numOfLayers int,
 	batchSize int,
-	lr float64,
+	learningRate float64,
 	inputDim int,
 	k []int,
 	l []int,
@@ -48,59 +48,19 @@ func New(
 	sparsity []float64,
 ) *Network {
 	hiddenLayers := make([]*layer.Layer, numOfLayers)
-	{
+	previousLayerNumOfNodes := inputDim
+
+	for i := range hiddenLayers {
 		var (
-			weight     []float64
-			bias       []float64
-			adamAvgMom []float64
-			adamAvgVel []float64
+			weight     []float64 = nil
+			bias       []float64 = nil
+			adamAvgMom []float64 = nil
+			adamAvgVel []float64 = nil
 		)
 
 		if configuration.Global.LoadWeight {
 			/*
 				TODO: load weight...
-				weightArr = arr["w_layer_"+to_string(i)];
-				weight = weightArr.data<float>();
-				biasArr = arr["b_layer_"+to_string(i)];
-				bias = biasArr.data<float>();
-
-				adamArr = arr["am_layer_"+to_string(i)];
-				adamAvgMom = adamArr.data<float>();
-				adamvArr = arr["av_layer_"+to_string(i)];
-				adamAvgVel = adamvArr.data<float>();
-			*/
-		}
-
-		hiddenLayers[0] = layer.New(
-			cowId,
-			sizesOfLayers[0],
-			inputDim,
-			0,
-			layerTypes[0],
-			batchSize,
-			k[0],
-			l[0],
-			rangePow[0],
-			sparsity[0],
-			weight,
-			bias,
-			adamAvgMom,
-			adamAvgVel,
-		)
-	}
-
-	for i := 1; i < numOfLayers; i++ {
-		var (
-			weight     []float64
-			bias       []float64
-			adamAvgMom []float64
-			adamAvgVel []float64
-		)
-
-		if configuration.Global.LoadWeight {
-			/*
-				TODO: load weight...
-
 				weightArr = arr["w_layer_"+to_string(i)];
 				weight = weightArr.data<float>();
 				biasArr = arr["b_layer_"+to_string(i)];
@@ -116,7 +76,7 @@ func New(
 		hiddenLayers[i] = layer.New(
 			cowId,
 			sizesOfLayers[i],
-			sizesOfLayers[i-1],
+			previousLayerNumOfNodes,
 			i,
 			layerTypes[i],
 			batchSize,
@@ -129,12 +89,14 @@ func New(
 			adamAvgMom,
 			adamAvgVel,
 		)
+
+		previousLayerNumOfNodes = sizesOfLayers[i]
 	}
 
 	return &Network{
 		cowId:            cowId,
 		hiddenLayers:     hiddenLayers,
-		learningRate:     lr,
+		learningRate:     learningRate,
 		numberOfLayers:   numOfLayers,
 		sizesOfLayers:    sizesOfLayers,
 		layersTypes:      layerTypes,
