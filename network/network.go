@@ -104,6 +104,9 @@ func (ne *Network) PredictClass(
 ) (int, *Network) {
 	n := ne.cloneIfNeeded(cowId)
 
+	hiddenLayers := n.hiddenLayers
+	lastHiddenLayer := hiddenLayers[n.numberOfLayers-1]
+
 	startTime := time.Now()
 	correctPred := 0
 
@@ -113,8 +116,8 @@ func (ne *Network) PredictClass(
 		activeNodesPerLayer[0] = example.Features
 
 		//inference
-		for layerIndex, layer := range n.hiddenLayers {
-			_, n.hiddenLayers[layerIndex] =
+		for layerIndex, layer := range hiddenLayers {
+			_, hiddenLayers[layerIndex] =
 				layer.QueryActiveNodeAndComputeActivations(
 					cowId,
 					activeNodesPerLayer,
@@ -126,7 +129,6 @@ func (ne *Network) PredictClass(
 		}
 
 		//compute softmax
-		lastHiddenLayer := n.hiddenLayers[n.numberOfLayers-1]
 		var maxAct float64
 		var predictClass int
 		for pairIndex, pair := range activeNodesPerLayer[n.numberOfLayers] {
@@ -157,6 +159,8 @@ func (ne *Network) ProcessInput(
 ) (float64, *Network) {
 	n := ne.cloneIfNeeded(cowId)
 
+	hiddenLayers := n.hiddenLayers
+
 	logLoss := 0.0
 	avgRetrieval := make([]int, n.numberOfLayers)
 	// avgRetrieval contains all zeroes by default
@@ -166,7 +170,7 @@ func (ne *Network) ProcessInput(
 
 		for i := 1; i < n.numberOfLayers; i++ {
 			// FIXME: or should this be done only on the very last layer?
-			n.hiddenLayers[i].UpdateRandomNodes()
+			hiddenLayers[i].UpdateRandomNodes()
 		}
 	}
 
@@ -183,9 +187,9 @@ func (ne *Network) ProcessInput(
 		activeNodesPerLayer := make([][]index_value.Pair, n.numberOfLayers+1)
 		activeNodesPerLayer[0] = example.Features
 
-		for layerIndex, layer := range n.hiddenLayers {
+		for layerIndex, layer := range hiddenLayers {
 			var in int
-			in, n.hiddenLayers[layerIndex] =
+			in, hiddenLayers[layerIndex] =
 				layer.QueryActiveNodeAndComputeActivations(
 					cowId,
 					activeNodesPerLayer,
@@ -199,9 +203,12 @@ func (ne *Network) ProcessInput(
 
 		// Backpropagation
 		for layerIndex := n.numberOfLayers - 1; layerIndex >= 0; layerIndex-- {
-			layer := n.hiddenLayers[layerIndex]
+			layer := hiddenLayers[layerIndex]
+			curLayerActiveNodes := activeNodesPerLayer[layerIndex]
+			nextLayerActiveNodes := activeNodesPerLayer[layerIndex+1]
+
 			// nodes
-			for _, pair := range activeNodesPerLayer[layerIndex+1] {
+			for _, pair := range nextLayerActiveNodes {
 				node := layer.GetNodeById(pair.Index)
 				if layerIndex == n.numberOfLayers-1 {
 					//TODO: Compute Extra stats: labels[i];
@@ -214,13 +221,13 @@ func (ne *Network) ProcessInput(
 					)
 				}
 				if layerIndex != 0 {
-					prevLayer := n.hiddenLayers[layerIndex-1]
+					prevLayer := hiddenLayers[layerIndex-1]
 					// FIXME: we should reassign the cow-ed node into the layer
 					allNodes := prevLayer.GetAllNodes()
 					node.BackPropagate(
 						cowId,
 						&allNodes, // FIXME: problematic...
-						activeNodesPerLayer[layerIndex],
+						curLayerActiveNodes,
 						tmpLr,
 						i,
 					)
@@ -237,16 +244,17 @@ func (ne *Network) ProcessInput(
 		}
 	}
 
-	for layerIndex, layer := range n.hiddenLayers {
-		tmpRehash := rehash && n.sparsity[layerIndex] < 1.0
-		tmpRebuild := rebuild && n.sparsity[layerIndex] < 1.0
+	for layerIndex, layer := range hiddenLayers {
+		curLayerSparsity := n.sparsity[layerIndex]
+		tmpRehash := rehash && curLayerSparsity < 1.0
+		tmpRebuild := rebuild && curLayerSparsity < 1.0
 
 		if tmpRehash {
 			layer.ClearHashTables()
 		}
 
 		if tmpRebuild {
-			n.hiddenLayers[layerIndex] = layer.UpdateTable(cowId)
+			hiddenLayers[layerIndex] = layer.UpdateTable(cowId)
 		}
 
 		const ratio = 1
