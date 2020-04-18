@@ -36,7 +36,6 @@ type NodeTrain struct {
 	cowId           int // "thread" ID for copy on write
 	lastDeltaforBPs float64
 	lastActivations float64
-	lastGradients   float64
 	activeinputIds  float64
 }
 
@@ -283,10 +282,7 @@ func (nd *Node) GetActivation(
 	case ReLU:
 		if n.train[inputId].lastActivations < 0 {
 			n.train[inputId].lastActivations = 0
-			n.train[inputId].lastGradients = 1
 			n.train[inputId].lastDeltaforBPs = 0
-		} else {
-			n.train[inputId].lastGradients = 0
 		}
 	case Softmax: // do nothing
 	default:
@@ -312,7 +308,6 @@ func (nd *Node) ComputeExtaStatsForSoftMax(
 	n.train[inputId].lastActivations /= normalizationConstant + 0.0000001
 
 	//TODO:check gradient
-	n.train[inputId].lastGradients = 1
 
 	if intSliceContains(labels, n.base.idInLayer) {
 		n.train[inputId].lastDeltaforBPs = 1.0/float64(len(labels)) -
@@ -510,7 +505,6 @@ func (t *NodeTrain) clone(cowId int) *NodeTrain {
 		cowId:           cowId,
 		lastDeltaforBPs: t.lastDeltaforBPs,
 		lastActivations: t.lastActivations,
-		lastGradients:   t.lastGradients,
 		activeinputIds:  t.activeinputIds,
 	}
 }
