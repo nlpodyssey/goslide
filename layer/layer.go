@@ -268,10 +268,6 @@ func (l *Layer) GetAllNodes() []*node.Node {
 	return l.nodes
 }
 
-func (l *Layer) GetNodeCount() int {
-	return len(l.nodes)
-}
-
 func (l *Layer) GetNomalizationConstant(inputId int) float64 {
 	if l.nodeType != node.Softmax {
 		panic("Call to GetNomalizationConstant for non-softmax layer")
