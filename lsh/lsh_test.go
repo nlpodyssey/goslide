@@ -93,14 +93,6 @@ func TestLSHClear(t *testing.T) {
 	assertIntEqual(t, result, 0, "Retrieve after Clear")
 }
 
-func TestLSHCount(t *testing.T) {
-	// Just ensure no error is raised
-	lsh := New(3, 4, 10)
-	lsh.Add([]int{1, 10, 100, 1000}, 4321)
-	lsh.Add([]int{2, 10, 200, 1000}, 9876)
-	lsh.Count()
-}
-
 func isPositiveOdd(t *testing.T, n int, msg string) {
 	if n == 0 {
 		t.Errorf("Assertion failed: %s | expected %d to be non zero", msg, n)

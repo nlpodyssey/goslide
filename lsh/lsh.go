@@ -61,20 +61,6 @@ func (lsh *LSH) Clear() {
 	}
 }
 
-func (lsh *LSH) Count() {
-	for i, bi := range lsh.buckets {
-		total := 0
-		for _, bj := range bi {
-			size := bj.GetSize()
-			if size != 0 {
-				fmt.Printf("%d ", size)
-			}
-			total += size
-		}
-		fmt.Printf("\nTABLE %d Total %d\n", i, total)
-	}
-}
-
 func (lsh *LSH) HashesToIndex(hashes []int) []int {
 	hashFunction := configuration.Global.HashFunction
 
