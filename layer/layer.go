@@ -45,22 +45,17 @@ type Layer struct {
 	binIds                  []int
 }
 
-type indexValuePair struct {
-	index int
-	value float64
-}
-
-type indexValuePairByValue []indexValuePair
+type indexValuePairByValue []index_value.Pair
 
 var _ sort.Interface = indexValuePairByValue{}
 
 func (p indexValuePairByValue) Len() int      { return len(p) }
 func (p indexValuePairByValue) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 func (p indexValuePairByValue) Less(i, j int) bool {
-	if p[i].value == p[j].value {
-		return p[i].index < p[j].index
+	if p[i].Value == p[j].Value {
+		return p[i].Index < p[j].Index
 	}
-	return p[i].value < p[j].value
+	return p[i].Value < p[j].Value
 }
 
 func New(
@@ -390,7 +385,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 				length = int(math.Floor(float64(len(l.nodes)) * sparsity))
 				activeNodesPerLayer[layerIndex+1] = make([]index_value.Pair, length)
 
-				sortW := make([]indexValuePair, 0)
+				sortW := make([]index_value.Pair, 0)
 				what := 0
 				for s, curNode := range l.nodes {
 					tmp := l.innerproduct(
@@ -398,15 +393,15 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 					tmp += curNode.Bias()
 
 					if intSliceContains(label, s) {
-						sortW = append(sortW, indexValuePair{
-							index: s,
-							value: -1000000000, // TODO: maybe min int?
+						sortW = append(sortW, index_value.Pair{
+							Index: s,
+							Value: -1000000000, // TODO: maybe min int?
 						})
 						what++
 					} else {
-						sortW = append(sortW, indexValuePair{
-							index: s,
-							value: -tmp,
+						sortW = append(sortW, index_value.Pair{
+							Index: s,
+							Value: -tmp,
 						})
 					}
 				}
@@ -414,8 +409,8 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 				sort.Sort(indexValuePairByValue(sortW))
 
 				for i, sw := range sortW {
-					activeNodesPerLayer[layerIndex+1][i].Index = sw.index
-					if intSliceContains(label, sw.index) {
+					activeNodesPerLayer[layerIndex+1][i].Index = sw.Index
+					if intSliceContains(label, sw.Index) {
 						in = 1
 					}
 				}
