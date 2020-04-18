@@ -30,10 +30,11 @@ func New(k, l, rangePow int) *LSH {
 
 	// TODO: parallel?
 	for i := range buckets {
-		buckets[i] = make([]*bucket.Bucket, 1<<rangePow)
-		for j := range buckets[i] {
-			buckets[i][j] = bucket.New()
+		newBuckets := make([]*bucket.Bucket, 1<<rangePow)
+		for j := range newBuckets {
+			newBuckets[j] = bucket.New()
 		}
+		buckets[i] = newBuckets
 	}
 
 	rand1 := make([]int, k*l)
