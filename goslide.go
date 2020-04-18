@@ -160,9 +160,10 @@ func evaluateSvm(cowId, numBatchesTest int, myNet *network.Network, iter int) {
 		numLabels := 0
 		examples = examples[:0]
 		for count := 0; count < config.BatchSize && scanner.Scan(); count++ {
-			examples = append(examples, scanner.Example())
-			numFeatures += len(examples[count].Features)
-			numLabels += len(examples[count].Labels)
+			example := scanner.Example()
+			examples = append(examples, example)
+			numFeatures += len(example.Features)
+			numLabels += len(example.Labels)
 		}
 
 		if err := scanner.Err(); err != nil {
