@@ -120,27 +120,27 @@ func (ne *Network) PredictClass(
 		activeNodesPerLayer[0] = example.Features
 
 		//inference
-		for j := 0; j < n.numberOfLayers; j++ {
-			_, n.hiddenLayers[j] =
-				n.hiddenLayers[j].QueryActiveNodeAndComputeActivations(
+		for layerIndex, layer := range n.hiddenLayers {
+			_, n.hiddenLayers[layerIndex] =
+				layer.QueryActiveNodeAndComputeActivations(
 					cowId,
 					activeNodesPerLayer,
-					j,
+					layerIndex,
 					i,
 					[]int{},
-					n.sparsity[n.numberOfLayers+j],
+					n.sparsity[n.numberOfLayers+layerIndex],
 					-1,
 				)
 		}
 
 		//compute softmax
-		maxAct := -222222222.0 // TODO: ...
-		predictClass := -1
-		for _, pair := range activeNodesPerLayer[n.numberOfLayers] {
-			curAct := n.hiddenLayers[n.numberOfLayers-1].GetNodeById(
-				pair.Index).GetLastActivation(i)
-			if maxAct < curAct {
-				maxAct = curAct
+		lastHiddenLayer := n.hiddenLayers[n.numberOfLayers-1]
+		var maxAct float64
+		var predictClass int
+		for pairIndex, pair := range activeNodesPerLayer[n.numberOfLayers] {
+			act := lastHiddenLayer.GetNodeById(pair.Index).GetLastActivation(i)
+			if maxAct < act || pairIndex == 0 {
+				maxAct = act
 				predictClass = pair.Index
 			}
 		}
