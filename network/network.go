@@ -23,14 +23,11 @@ const (
 )
 
 type Network struct {
-	cowId            int // "thread" ID for copy on write
-	hiddenLayers     []*layer.Layer
-	learningRate     float64
-	numberOfLayers   int
-	sizesOfLayers    []int
-	layersTypes      []node.NodeType
-	sparsity         []float64
-	currentBatchSize int
+	cowId          int // "thread" ID for copy on write
+	hiddenLayers   []*layer.Layer
+	learningRate   float64
+	numberOfLayers int
+	sparsity       []float64
 }
 
 func New(
@@ -93,14 +90,11 @@ func New(
 	}
 
 	return &Network{
-		cowId:            cowId,
-		hiddenLayers:     hiddenLayers,
-		learningRate:     learningRate,
-		numberOfLayers:   numOfLayers,
-		sizesOfLayers:    sizesOfLayers,
-		layersTypes:      layerTypes,
-		sparsity:         sparsity,
-		currentBatchSize: batchSize,
+		cowId:          cowId,
+		hiddenLayers:   hiddenLayers,
+		learningRate:   learningRate,
+		numberOfLayers: numOfLayers,
+		sparsity:       sparsity,
 	}
 }
 
