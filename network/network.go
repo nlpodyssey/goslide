@@ -105,10 +105,6 @@ func New(
 	}
 }
 
-func (n *Network) GetLayer(layerId int) *layer.Layer {
-	return n.hiddenLayers[layerId]
-}
-
 func (ne *Network) PredictClass(
 	cowId int,
 	examples []dataset.Example,
