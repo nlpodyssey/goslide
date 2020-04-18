@@ -20,7 +20,6 @@ const (
 	beta1 = 0.9
 	beta2 = 0.999
 	eps   = 0.00000001
-	debug = true
 )
 
 type Network struct {
@@ -185,35 +184,32 @@ func (ne *Network) ProcessInput(
 		// TODO: ?? else: tmplr *= pow(0.9, iter/10.0);
 	}
 
-	activeNodesPerBatch := make([][][]index_value.Pair, n.currentBatchSize)
-
 	// TODO: parallel!
 	for i, example := range examples {
 		activeNodesPerLayer := make([][]index_value.Pair, n.numberOfLayers+1)
-		activeNodesPerBatch[i] = activeNodesPerLayer
 		activeNodesPerLayer[0] = example.Features
 
-		for j := 0; j < n.numberOfLayers; j++ {
+		for layerIndex, layer := range n.hiddenLayers {
 			var in int
-			in, n.hiddenLayers[j] = n.hiddenLayers[j].QueryActiveNodeAndComputeActivations(
-				cowId,
-				activeNodesPerLayer,
-				j,
-				i,
-				example.Labels,
-				n.sparsity[j],
-			)
-			avgRetrieval[j] += in
+			in, n.hiddenLayers[layerIndex] =
+				layer.QueryActiveNodeAndComputeActivations(
+					cowId,
+					activeNodesPerLayer,
+					layerIndex,
+					i,
+					example.Labels,
+					n.sparsity[layerIndex],
+				)
+			avgRetrieval[layerIndex] += in
 		}
 
-		// Now backpropagate.
-		// layers
-		for j := n.numberOfLayers - 1; j >= 0; j-- {
-			layer := n.hiddenLayers[j]
+		// Backpropagation
+		for layerIndex := n.numberOfLayers - 1; layerIndex >= 0; layerIndex-- {
+			layer := n.hiddenLayers[layerIndex]
 			// nodes
-			for _, pair := range activeNodesPerBatch[i][j+1] {
+			for _, pair := range activeNodesPerLayer[layerIndex+1] {
 				node := layer.GetNodeById(pair.Index)
-				if j == n.numberOfLayers-1 {
+				if layerIndex == n.numberOfLayers-1 {
 					//TODO: Compute Extra stats: labels[i];
 					// FIXME: we should reassign the cow-ed node into the layer
 					node.ComputeExtaStatsForSoftMax(
@@ -223,14 +219,14 @@ func (ne *Network) ProcessInput(
 						example.Labels,
 					)
 				}
-				if j != 0 {
-					prevLayer := n.hiddenLayers[j-1]
+				if layerIndex != 0 {
+					prevLayer := n.hiddenLayers[layerIndex-1]
 					// FIXME: we should reassign the cow-ed node into the layer
 					allNodes := prevLayer.GetAllNodes()
 					node.BackPropagate(
 						cowId,
 						&allNodes, // FIXME: problematic...
-						activeNodesPerBatch[i][j],
+						activeNodesPerLayer[layerIndex],
 						tmpLr,
 						i,
 					)
@@ -247,23 +243,23 @@ func (ne *Network) ProcessInput(
 		}
 	}
 
-	for l := 0; l < n.numberOfLayers; l++ {
-		tmpRehash := rehash && n.sparsity[l] < 1.0
-		tmpRebuild := rebuild && n.sparsity[l] < 1.0
+	for layerIndex, layer := range n.hiddenLayers {
+		tmpRehash := rehash && n.sparsity[layerIndex] < 1.0
+		tmpRebuild := rebuild && n.sparsity[layerIndex] < 1.0
 
 		if tmpRehash {
-			n.hiddenLayers[l].ClearHashTables()
+			layer.ClearHashTables()
 		}
 
 		if tmpRebuild {
-			n.hiddenLayers[l] = n.hiddenLayers[l].UpdateTable(cowId)
+			n.hiddenLayers[layerIndex] = layer.UpdateTable(cowId)
 		}
 
 		const ratio = 1
 
 		// TODO: parallel!
-		for m := 0; m < n.hiddenLayers[l].NumOfNodes(); m++ {
-			tmp := n.hiddenLayers[l].GetNodeById(m)
+		for m := 0; m < layer.NumOfNodes(); m++ {
+			tmp := layer.GetNodeById(m)
 			dim := tmp.Dim()
 			curWeights := tmp.Weights()
 
@@ -296,19 +292,20 @@ func (ne *Network) ProcessInput(
 
 			// FIXME: now tmp was modified and should be set back into hiddenLayers[l]
 			if tmpRehash {
-				hashes := n.hiddenLayers[l].GetHashForInputProcessing(curWeights)
-				hashIndices := n.hiddenLayers[l].HashesToIndex(hashes)
-				n.hiddenLayers[l].HashTablesAdd(hashIndices, m+1)
+				hashes := layer.GetHashForInputProcessing(curWeights)
+				hashIndices := layer.HashesToIndex(hashes)
+				layer.HashTablesAdd(hashIndices, m+1)
 			}
 		}
 
 	}
 
-	if debug && rehash {
-		for i, v := range avgRetrieval {
-			fmt.Printf("Avg sample size [%d] = %f\n",
-				i, float64(v)/float64(n.currentBatchSize))
+	if rehash {
+		fmt.Printf("Avg sample size")
+		for _, v := range avgRetrieval {
+			fmt.Printf(" %.3f", float64(v)/float64(len(examples)))
 		}
+		fmt.Println()
 	}
 
 	return logLoss, n
