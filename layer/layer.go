@@ -336,15 +336,8 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			}
 
 			for _, iVal := range actives {
-				if iVal == nil || len(iVal) == 0 {
-					continue
-				}
 				for _, jVal := range iVal {
-					tempId := jVal - 1
-					if tempId < 0 {
-						break
-					}
-					counts[tempId] += 1
+					counts[jVal-1] += 1
 				}
 			}
 
@@ -458,16 +451,9 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			}
 
 			for _, iVal := range actives {
-				if iVal == nil || len(iVal) == 0 {
-					continue
-				}
 				// copy sparse array into (dense) map
 				for _, jVal := range iVal {
-					tempId := jVal - 1
-					if tempId < 0 {
-						break
-					}
-					counts[tempId] += 1
+					counts[jVal-1] += 1
 				}
 			}
 

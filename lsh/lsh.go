@@ -5,11 +5,10 @@
 package lsh
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 
-	"github.com/nlpodyssey/goslide/bucket"
+	"github.com/nlpodyssey/goslide/bucket/fifo"
 	"github.com/nlpodyssey/goslide/configuration"
 )
 
@@ -18,7 +17,7 @@ const binSize = 8
 var logBinSize = int(math.Floor(math.Log(float64(binSize))))
 
 type LSH struct {
-	buckets  [][]*bucket.Bucket
+	buckets  [][]*fifo.FifoBucket
 	k        int
 	l        int
 	rangePow int
@@ -26,13 +25,13 @@ type LSH struct {
 }
 
 func New(k, l, rangePow int) *LSH {
-	buckets := make([][]*bucket.Bucket, l)
+	buckets := make([][]*fifo.FifoBucket, l)
 
 	// TODO: parallel?
 	for i := range buckets {
-		newBuckets := make([]*bucket.Bucket, 1<<rangePow)
+		newBuckets := make([]*fifo.FifoBucket, 1<<rangePow)
 		for j := range newBuckets {
-			newBuckets[j] = bucket.New()
+			newBuckets[j] = fifo.New()
 		}
 		buckets[i] = newBuckets
 	}

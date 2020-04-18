@@ -58,10 +58,8 @@ func TestLSHRetrieveRaw(t *testing.T) {
 	assertIntEqual(t, len(result), 4, "len(RetrieveRaw)")
 
 	for i, r := range result {
-		assertIntEqual(t, len(r), 128, fmt.Sprintf("len(RetrieveRaw[%d])", i))
-
+		assertIntEqual(t, len(r), 1, fmt.Sprintf("len(RetrieveRaw[%d])", i))
 		assertIntEqual(t, r[0], 4321, fmt.Sprintf("RetrieveRaw[%d][0]", i))
-		assertIntEqual(t, r[1], -1, fmt.Sprintf("RetrieveRaw[%d][1]", i))
 	}
 }
 
