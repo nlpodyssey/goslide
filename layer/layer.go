@@ -337,7 +337,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 
 			for _, iVal := range actives {
 				for _, jVal := range iVal {
-					counts[jVal-1] += 1
+					counts[jVal] += 1
 				}
 			}
 
@@ -453,7 +453,7 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			for _, iVal := range actives {
 				// copy sparse array into (dense) map
 				for _, jVal := range iVal {
-					counts[jVal-1] += 1
+					counts[jVal] += 1
 				}
 			}
 
@@ -601,7 +601,7 @@ func (l *Layer) addToHashTable(
 	}
 
 	hashIndices := l.hashTables.HashesToIndex(hashes)
-	l.hashTables.Add(hashIndices, id+1)
+	l.hashTables.Add(hashIndices, id)
 }
 
 func (l *Layer) innerproduct(

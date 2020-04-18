@@ -296,7 +296,7 @@ func (ne *Network) ProcessInput(
 			if tmpRehash {
 				hashes := layer.GetHashForInputProcessing(curWeights)
 				hashIndices := layer.HashesToIndex(hashes)
-				layer.HashTablesAdd(hashIndices, m+1)
+				layer.HashTablesAdd(hashIndices, m)
 			}
 		}
 
