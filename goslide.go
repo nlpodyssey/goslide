@@ -7,6 +7,7 @@ package main
 import (
 	"log"
 	"os"
+	"runtime/pprof"
 	"time"
 
 	"github.com/nlpodyssey/goslide/configuration"
@@ -27,6 +28,18 @@ func main() {
 	loadGlobalConfiguration()
 
 	config := configuration.Global
+
+	if config.CpuProfile {
+		f, err := os.Create("cpu.prof")
+		if err != nil {
+			logger.Fatal(err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			logger.Fatal(err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
 	// Initialize Network
 
@@ -70,6 +83,19 @@ func main() {
 			evaluateSvm(cowId, numBatchesTest, myNet, (e+1)*numBatches)
 		} else {
 			evaluateSvm(cowId, 50, myNet, (e+1)*numBatches)
+		}
+	}
+
+	if config.MemProfile {
+		f, err := os.Create("mem.prof")
+		if err != nil {
+			logger.Fatal(err)
+		}
+		defer f.Close()
+		// Do not call `runtime.GC()` so that we can inspect
+		// the complete current memory status
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			logger.Fatal(err)
 		}
 	}
 }

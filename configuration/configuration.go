@@ -36,6 +36,8 @@ type Configuration struct {
 	HashFunction   HashFunctionType
 	LoadWeight     bool
 	LayerMode      LayerModeType
+	CpuProfile     bool
+	MemProfile     bool
 }
 
 type HashFunctionType int8
@@ -82,6 +84,8 @@ func Default() *Configuration {
 		HashFunction:   DensifiedWtaHashFunction,
 		LoadWeight:     false,
 		LayerMode:      LayerMode4,
+		CpuProfile:     false,
+		MemProfile:     false,
 	}
 }
 
