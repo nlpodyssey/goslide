@@ -460,8 +460,6 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 			in = len(counts)
 
 			if len(counts) < 1500 { // TODO: avoid magic number
-				// TODO: it doesn't look like the best place to seed here
-				rand.Seed(time.Now().UnixNano())
 				start := rand.Intn(len(l.nodes))
 				for i := start; i < len(l.nodes); i++ {
 					if len(counts) >= 1000 { // TODO: avoid magic number
