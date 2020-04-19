@@ -327,6 +327,8 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 
 			// Get candidates from hashtable
 
+			// TODO: optimize using a slice instead of a map
+			//       (see implementation in LayerMode4 case below)
 			counts := make(map[int]int)
 			// Make sure that the true label node is in candidates
 			if l.nodeType == node.Softmax && len(label) > 0 {
@@ -442,55 +444,69 @@ func (la *Layer) QueryActiveNodeAndComputeActivations(
 
 			// Get candidates from hashtable
 
-			counts := make(map[int]int)
+			countsSize := 0
+			counts := make([]int, len(l.nodes))
+			for i := range counts {
+				counts[i] = -1
+			}
+
 			// Make sure that the true label node is in candidates
 			if l.nodeType == node.Softmax && len(label) > 0 {
 				for _, labelValue := range label {
 					counts[labelValue] = l.l
 				}
+				countsSize = len(label)
 			}
 
 			for _, iVal := range actives {
-				// copy sparse array into (dense) map
 				for _, jVal := range iVal {
+					if counts[jVal] == -1 {
+						countsSize++
+						counts[jVal] = 1
+						continue
+					}
 					counts[jVal] += 1
 				}
 			}
 
-			in = len(counts)
+			in = countsSize
 
-			if len(counts) < 1500 { // TODO: avoid magic number
+			if countsSize < 1500 { // TODO: avoid magic number
 				start := rand.Intn(len(l.nodes))
 				for i := start; i < len(l.nodes); i++ {
-					if len(counts) >= 1000 { // TODO: avoid magic number
+					if countsSize >= 1000 { // TODO: avoid magic number
 						break
 					}
 					cIndex := l.randNode[i]
-					if _, ok := counts[cIndex]; !ok {
+					if counts[cIndex] == -1 {
+						countsSize++
 						counts[cIndex] = 0
 					}
 				}
 
-				if len(counts) < 1000 { // TODO: avoid magic number
+				if countsSize < 1000 { // TODO: avoid magic number
 					for _, randNodeValue := range l.randNode {
-						if len(counts) >= 1000 { // TODO: avoid magic number
+						if countsSize >= 1000 { // TODO: avoid magic number
 							break
 						}
-						if _, ok := counts[randNodeValue]; !ok {
+						if counts[randNodeValue] == -1 {
+							countsSize++
 							counts[randNodeValue] = 0
 						}
 					}
 				}
 			}
 
-			length = len(counts)
+			length = countsSize
 			newActiveNodes := make([]index_value.Pair, length)
 
 			// copy map into new array
 			i := 0
-			for index := range counts {
-				newActiveNodes[i].Index = index
-				i++
+			for index, value := range counts {
+				if value >= 0 {
+					newActiveNodes[i].Index = index
+					i++
+				}
 			}
 			activeNodesPerLayer[layerIndex+1] = newActiveNodes
 		}
