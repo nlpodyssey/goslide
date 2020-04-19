@@ -73,44 +73,46 @@ func New(numHashes, numOfBitsToHash int) *DensifiedWtaHash {
 }
 
 func (dw *DensifiedWtaHash) GetHash(data []index_value.Pair) []int {
-	hashes := make([]int, dw.numHashes)
-	hashArray := make([]int, dw.numHashes)
-	values := make([]float64, dw.numHashes)
-
-	for i := range hashes {
-		hashes[i] = math.MinInt64
-		values[i] = math.MinInt64
+	type item struct {
+		hash  int
+		value float64
+		init  bool
 	}
+
+	items := make([]item, dw.numHashes)
+	hashArray := make([]int, dw.numHashes)
 
 	for p := 0; p < dw.permute; p++ {
 		binIndex := p * dw.rangePow
 		for i, pair := range data {
 			innerIndex := binIndex + i
 			binId := dw.indices[innerIndex]
-			if binId < dw.numHashes && values[binId] < pair.Value {
-				values[binId] = pair.Value
-				hashes[binId] = dw.pos[innerIndex]
+			if binId < dw.numHashes &&
+				(!items[binId].init || items[binId].value < pair.Value) {
+				items[binId].init = true
+				items[binId].value = pair.Value
+				items[binId].hash = dw.pos[innerIndex]
 			}
 		}
 	}
 
-	for i, next := range hashes {
-		if next != math.MinInt64 {
-			hashArray[i] = next
+	for i, next := range items {
+		if next.init {
+			hashArray[i] = next.hash
 			continue
 		}
 
-		for count := 1; next == math.MinInt64; count++ {
+		for count := 1; !next.init; count++ {
 			index := minInt(dw.GetRandDoubleHash(i, count), dw.numHashes-1)
-			next = hashes[index] // Kills GPU.
+			next = items[index] // Kills GPU.
 
 			if count > 100 { // Densification failure.
-				next = 0 // FIXME: can we do better than that?
+				next.hash = 0 // FIXME: can we do better than that?
 				break
 			}
 		}
 
-		hashArray[i] = next
+		hashArray[i] = next.hash
 	}
 
 	return hashArray
